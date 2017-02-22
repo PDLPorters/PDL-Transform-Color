@@ -157,7 +157,7 @@ the RGB triplet as "Value" rather than the derived "Lightness".  As a
 result, highly saturated HSV values have lower overall luminance than
 unsaturated HSV values with the same V, and the V=1 surface includes
 all the primary colors of the parent RGB system.  This takes advantage
-of the "Helmholtz-Kolhrausch effect" that E<perceived> brightness
+of the "Helmholtz-Kolhrausch effect" that I<perceived> brightness
 increases with saturation, so V better approximates perceived
 brightness at a given hue and saturation, than does L.
 
