@@ -62,18 +62,18 @@ brightnesses (lsRGB).
 
 Note that, in general, RGB representations are limited to a particular
 narrow gamut of physically accessible values, because it is not
-possible for light to have a negative intensity (and therefore no trio
-of physical primary colors, which form a basis for an RGB color space,
-can represent every perceivable color).  But in digital
-representation, there is no hard limit on the values of the RGB
-vectors.  This permits representation of out-of-gamut values using
-negative or over-unity intensities.  So floating-point lsRGB allows
-you to represent literally any color value that the human eye can
-perceive, and many that it can't.  This is useful even though many
-such colors can't be rendered on a monitor.  For example, you can
-change between several color representations and not be limited by the
-formal gamut of each representation -- only by the final export
-standard.
+possible for light to have a negative intensity. Therefore no trio of
+physical primary colors, which form a basis for an RGB color space,
+can represent every perceivable color.  But in digital representation,
+there is no hard limit on the values of the RGB vectors -- they can be
+negative or arbitrarily large.  This permits representation of
+out-of-gamut values using negative or over-unity intensities.  So
+floating-point lsRGB allows you to represent literally any color value
+that the human eye can perceive, and many that it can't.  This is
+useful even though many such colors can't be rendered on a monitor.
+For example, you can change between several color representations and
+not be limited by the formal gamut of each representation -- only by
+the final export standard.
 
 Three major output formats are supported: sRGB (standard "24-bit
 color" with the industry standard transfer function); bRGB (bytescaled
