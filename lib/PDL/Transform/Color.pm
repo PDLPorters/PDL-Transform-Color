@@ -103,7 +103,7 @@ space.  While any vector in color space can be represented as a linear
 sum of three indepenent basis vectors ("primary colors"), there is no
 such thing as a negative intensity and therefore any tricolor
 representation of the color space is limited to a "gamut" that can be
-formed by E<positive> linear combinations of the primaries.
+formed by I<positive> linear combinations of the primaries.
 
 RGB color representations therefore require the specification of 
 particular primary colors, and the choice depends on the technical
@@ -122,9 +122,9 @@ of this system corresponds closely to green, and is used by CIE as a
 proxy for overall luminance.  
 
 The CIE also separated "chrominance" and "luminance" signals, in a 
-separate system called "xyY", which represente color as sum-normalized
+separate system called "xyY", which represents color as sum-normalized
 vectors "x=X/(X+Y+Z), "y=Y/(X+Y+Z)", and "z=Z/(X+Y+Z)".  By construction,
-x+y+z=1, so "x" and "y" alone describe the color gamut of the system, and
+x+y+z=1, so "x" and "y" alone describe the color range of the system, and
 "Y" stands in for overall luminance.
 
 Many other representations exist that separate chromatic value from
@@ -132,8 +132,34 @@ brightness.  In general, these can be divided into polar coordinates
 that represent hue as a single value divorced from the rgb basis, and
 those that represent it as a combination of two values like the 'x'
 and 'y' of the CIE xyY space.  These are all based on the Munsell and
-Ostwald color systems, which were worked out at about the same time
-as the CIE system.
+Ostwald color systems, which were worked out at about the same time as
+the CIE system.  
+
+Two simple Munsell-like representations that work within the gamut of
+a particular RGB basis are HSV and HSL.  HSV and HSL are both derived
+representations that are best defined relative to a particular RGB
+system. They are both designed specifically to represent an entire RGB
+gamut with a quasi-polar coordinate system.
+
+HSL separates "Hue" and "Saturation" from "Lightness".  Hue represents
+the spectral shade of the color as a direction from the central white
+R=G=B line through RGB space.  Saturation is a normalized chromaticity
+measuring fraction of the distance from the white locus to the nearest
+edge of the RGB gamut at a particular hue and lightness.  Lightness is
+an approximately hue- independent measure of total intensity.  Deeply
+objectively "saturated" colors are only accessible at L=0.5; the L=0.5
+surface includes all the additive and subtractive primary colors of
+the RGB system.  Darker colors are less-saturated shades, while
+brighter colors fade to pastels.  
+
+HSV is similar to HSL, but tracks only the brightest component among
+the RGB triplet as "Value" rather than the derived "Lightness".  As a
+result, highly saturated HSV values have lower overall luminance than
+unsaturated HSV values with the same V, and the V=1 surface includes
+all the primary colors of the parent RGB system.  This takes advantage
+of the "Helmholtz-Kolhrausch effect" that E<perceived> brightness
+increases with saturation, so V better approximates perceived
+brightness at a given hue and saturation, than does L.
 
 Modern display devices generally produce physical brightnesses that
 are proportional not to their input signal, but to a nonlinear
@@ -300,21 +326,23 @@ sub gammify {
 
 ##############################
 
-=head2 PDL::Transform::Color::t_gamma 
+=head2 t_gamma 
 
 =for usage
 
-    $t = PDL::Transform::Color::t_gamma($gamma);
+    $t = t_gamma($gamma);
 
 =for ref
 
 This is an internal generator that is used to implement the standard
-C<gamma> parameter for all color transforms.
+C<gamma> parameter for all color transforms.  It is exported as well
+because many casual users just want to apply a gamma curve to existing
+data.
 
-In the forward direction, C<t_gamma> applies the gamma correction
+In the forward direction, C<t_gamma> applies/decodes the gamma correction
 indicated -- e.g. if the C<$gamma> parameter at generation time is 2,
-then the forward direction squares its input, and in reverse direciton
-takes the square root.
+then the forward direction squares its input, and the inverse direction
+takes the square root (encodes the gamma correction).
 
 Gamma correction is implemented using a sign-tolerant approach: 
 negative-going values get the same power-law curve applied, but in the 
@@ -361,14 +389,13 @@ sub t_gamma {
 
 =for ref
 
-Convert normalized sRGB (closed domain: 0 to 1) to byte-scaled RGB
-(semi-open domain: 0 inclusive to 256 exclusive, floating point).  By
-default, C<t_brgb> prepares byte values tuned for a display gamma of
-2.2, which approximates sRGB (the standard output color coding for
+Convert lsRGB (normalized to [0,1]) to byte-scaled RGB ( [0,255] ).
+By default, C<t_brgb> prepares byte values tuned for a display gamma
+of 2.2, which approximates sRGB (the standard output color coding for
 most computer displays).  The difference between C<t_brgb> and
-C<t_srgb> is that C<t_srgb> uses the actual spliced-curve
-approximation specified in the sRGB standard, while C<t_brgb> uses a
-simple gamma law for export.
+C<t_srgb> in this usage is that C<t_srgb> uses the actual
+spliced-curve approximation specified in the sRGB standard, while
+C<t_brgb> uses a simple gamma law for export.
 
 C<t_brgb> accepts the following options, all of which may be abbreviated:
 
@@ -454,14 +481,14 @@ sub t_brgb {
 
 =for ref
 
-Converts linearized sRGB (the internal base representation) to sRGB -
-the typical RGB encoding used by most computing devices.  Since most
-computer terminals use sRGB, the representation's gamut is well matched
-to most computer monitors.
+Converts lsRGB (the internal floating-point base representation) to
+sRGB - the typical RGB encoding used by most computing devices.  Since
+most computer terminals use sRGB, the representation's gamut is well
+matched to most computer monitors.
 
-sRGB is a spliced standard, rather having a direct gamma correction.
-Hence there is no way to adjust the output gamma.  If you want to do 
-that, use C<t_brgb> instead.
+sRGB is a spliced standard, rather than having a direct gamma
+correction.  Hence there is no way to adjust the output gamma.  If you
+want to do that, use C<t_brgb> instead.
 
 C<t_srgb> accepts the following options, all of which may be abbreviated:
 
@@ -547,17 +574,18 @@ sub t_srgb {
 
 =head2 PDL::Transform::Color::xyy_from_D
 
-=usage
+=for usage
 
      $xyy = PDL::Transform::Color::xyy_from_D($D_value)
 
 =for ref
 
 This utility routine generates CIE xyY system colorimetric values for
-standard CIE illuminants.  The illuminants are calculated from a
-standard formula and correspond to black body temperatures between
-4,000K and 250,000K.  The D value is the temperature in K divided by
-100, e.g. broad daylight is D65, corresponding to 6500 Kelvin.
+standard CIE D-class illuminants (e.g., D50 or D65).  The illuminants are
+calculated from a standard formula and correspond to black body
+temperatures between 4,000K and 250,000K.  The D value is the
+temperature in K divided by 100, e.g. broad daylight is D65,
+corresponding to 6500 Kelvin.
 
 This is used for calculating standard reference illuminants, to convert
 RGB values between illuminants.  
@@ -650,15 +678,16 @@ my $hptab = [
 
 =head2 PDL::Transform::Color::xyy_from_illuminant
 
-=usage
+=for usage
 
      $xyy = PDL::Transform::Color::xyy_from_illuminant($name)
 
 =for ref
 
 This utility routine generates CIE xyY system colorimetric values for
-standard CIE illuminants.  The illuminants are looked up in a table
-populated from the CIE publication E<Colorimatry>, 3rd edition.
+all of the standard CIE illuminants.  The illuminants are looked up in
+a table populated from the CIE publication I<Colorimetry>, 3rd
+edition.
 
 The illuminant of a system is equivalent to its white point -- it is
 the location in xyY absolute colorimetric space that corresponds to
@@ -693,7 +722,7 @@ The CIE names are:
 
 =item B - not supported (deprecated by CIE)
 
-=item C - early daylight simulant, replaced by the D<n> sources
+=item C - early daylight simulant, replaced by the D[n] sources
 
 =item D[n] - Blackbody radiation at 100[n] Kelvin (e.g. D65)
 
@@ -1616,7 +1645,7 @@ saturation occurs when S=1 and L=0.5; at higher values of L, colors
 grow less saturated and more pastel, so that L follows total
 luminosity of the output.
 
-HSV is a stacked sinfle-cone system: iso-V surfaces are parallel to
+HSV is a stacked single-cone system: iso-V surfaces are parallel to
 the bright faces of the RGB cube, so maximal bright saturation occurs
 when S=1 and V=1.  This means that output luminosity drops with
 saturation, but due to the Helmholtz-Kolrausch effect (linking
@@ -1625,7 +1654,7 @@ S-dependent: V follows total *apparent brightness* of the output,
 though output luminosity drops with S.
 
 You can represent out-of-gamut values in either system, by using
-saturations greater than unity.
+S values greater than unity, or "illegal" V or L values.
 
 Hue, Saturation, and (Lightness or Value) each run from 0 to 1.  
 
