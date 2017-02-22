@@ -1,14 +1,18 @@
-use Test::More test=>53;
+use Test::More;
+
 
 BEGIN {
+    plan tests=>53;
+
     use_ok('PDL::Transform::Color') || print "Bail out!\n";
 }
 
 eval "use PDL::Transform::Color;";
 
 ok( $PDL::Transform::Color::VERSION, "looks like there's a version in the module" );
+use PDL;
 use PDL::Transform;
-
+use PDL::NiceSlice;
 
 ##########
 ## test t_gamma
