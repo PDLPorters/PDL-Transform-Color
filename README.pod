@@ -28,7 +28,7 @@ If you aren't familiar with PDL::Transform, you should read that POD
 now, as this is a subclass of PDL::Transform.  Transforms represent
 and encapsulate vector transformations -- one- or two-way vector
 functions that may be applied, composed, or (if possible) inverted.
-They are created through constructor objects that often allow
+They are created through constructor methods that often allow
 parametric adjustment at creation time.  A Transform object may be
 applied to vectors, or used to resample a scientific data set.
 
