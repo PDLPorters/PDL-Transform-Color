@@ -1,3 +1,10 @@
+=head1 OVERVIEW
+
+This module provides transformations for manipulating color.  This repository 
+stores the history for the PDL::Transform::Color module on CPAN. 
+
+=cut
+
 =head1 NAME
 
 PDL::Transform::Color - Useful color system conversions for PDL
@@ -204,102 +211,6 @@ itself.  The module comes with NO WARRANTY.
 =head1 FUNCTIONS
 
 =cut
-
-use PDL::Transform;
-
-package PDL::Transform::Color;
-
-use PDL::Core ':Internal';  # load "topdl" (internal routine)
-
-@ISA = ( 'Exporter', 'PDL::Transform' );
-our $VERSION = '0.1';
-$VERSION = eval $VERSION;
-
-BEGIN {
-    package PDL::Transform::Color;
-    use base 'Exporter';
-    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv /;
-    @EXPORT = @EXPORT_OK;
-    %EXPORT_TAGS = (Func=>[@EXPORT_OK]);
-};
-
-use strict;
-use PDL;
-use PDL::Transform;
-use PDL::MatrixOps;
-use PDL::Options;
-use PDL::NiceSlice;
-
-use Carp;
-
-our $PI = $PDL::Transform::PI;
-our $DEG2RAD = $PDL::Transform::DEG2RAD;
-our $RAD2DEG = $PDL::Transform::RAD2DEG;
-
-
-# Some matrix values of use in RGB conversions...
-
-# Matrix to convert CIE RGB to CIE XYZ
-our($crgb2cxyz_mat) =
-    pdl(  [0.49000, 0.31000, 0.20000], 
-	  [0.17697, 0.81240, 0.01063],
-	  [0.00000, 0.01000, 0.99000]
-      ) / 0.17697;
-our($crgb2ciexyz_inv) = $crgb2cxyz_mat->inv;
-
-# Matrix to convert CIE XYZ to sRGB
-our($srgb2cxyz_inv) =
-    pdl( [ 3.2410, -1.5374, -0.4986],
-	 [-0.9692,  1.8760,  0.0416],
-	 [ 0.0556, -0.2040,  1.0570]
-    );
-our($srgb2cxyz_mat) = $srgb2cxyz_inv->inv;
-
-
-sub _strval {
-    my($me) = shift;
-    $me->stringify();
-}
-
-sub _new { new('PDL::Transform::Color',@_) }
-
-sub new {
-    my($class) = shift;
-    my($parse) = pop;
-    my($name) = pop;
-    my($me) = PDL::Transform::new($class);
-    $me->{name} = $name;
-    $me->{u_opt} = {@_};
-    $me->{idim} = 3;
-    $me->{odim} = 3;
-    
-    my %opt = parse($parse, $me->{u_opt});
-    $me->{params} = \%opt;
-    
-    return $me;
-}
-
-
-## Compose with gamma correction if necessary
-sub gammify {
-    my $me = shift;
-
-    if( exists($me->{params}->{gamma}) && 
-	defined($me->{params}->{gamma}) && 
-	$me->{params}->{gamma} != 1 ) {
-
-	# Decode gamma from source
-	return ( $me x t_gamma($me->{params}->{gamma}) );
- 
-   } else {
-
-	return $me;
-
-    }
-}
-
-##############################
-
 =head2 PDL::Transform::Color::t_gamma 
 
 =for usage
@@ -321,38 +232,6 @@ negative-going values get the same power-law curve applied, but in the
 negative direction.
 
 =cut
-
-sub t_gamma {
-    my $gamma = shift;
-    my ($me) = _new("gamma",{});
-
-    $me->{params} = {gamma=>$gamma};
-    $me->{name} .= sprintf("=%g",$gamma);
-    $me->{idim} = 3;
-    $me->{odim} = 3;
-
-    $me->{func} = sub {
-	my ($in, $opt) = @_;
-	my $out = $in->new_or_inplace;
-	if($opt->{gamma} != 1) {
-	    $out *= ($in->abs + ($in==0)) ** ($opt->{gamma}-1);
-	}
-	$out;
-    };
-
-    $me->{inv} = sub {
-	my ($in, $opt) = @_;
-	my $out = $in->new_or_inplace;
-	if($opt->{gamma} != 1) {
-	    $out *= ($in->abs + ($in==0)) ** (1.0/$opt->{gamma} - 1);
-	}
-    };
-	
-    $me;
-}
-
-##############################
-
 =head2 t_brgb
 
 =for usage
@@ -403,53 +282,6 @@ type would be useless.)
 =back
 
 =cut
-
-sub t_brgb {
-    my($me) = _new(@_,'encode bytescaled RGB',
-		   {clip=>1,
-		    byte=>1,
-		    gamma=>1.0,
-		    display_gamma=>2.2,
-		   }
-	);
-
-    $me->{func} = sub {
-	my($in, $opt) = @_;
-	my $out = $in->new_or_inplace;
-
-	if($opt->{display_gamma} != 1) {
-	    $out *= ($out->abs)**(1.0/$opt->{display_gamma} - 1);
-	}
-	
-	$out *= 255.0;
-
-	if($opt->{byte}) {
-	    $out = byte($out->rint->clip(0,255));
-	} elsif($opt->{clip}) {
-	    $out->inplace->clip(0,255.49999);
-	} 
-
-	$out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-
-	my $out = $in / 255.0;
-
-	if($opt->{display_gamma} != 1) {
-	    $out *= ($out->abs)**($opt->{display_gamma}-1);
-	}
-
-	if($opt->{clip}) {
-	    $out->inplace->clip(0,1);
-	}
-	$out;
-    };
-    
-    return gammify($me);
-}
-
 =head2 t_srgb 
 
 =for ref
@@ -487,64 +319,6 @@ C<byte> option is not set.
 =back
 
 =cut
-  
-sub t_srgb {
-    my($me) = _new(@_,'encode 24-bit sRGB',
-		   {clip=>0,
-		    byte=>1,
-		    gamma=>1.0
-		   }
-	);
-    $me->{func} = sub {
-	my($in,$opt) = @_;
-	
-	# Convert from CIE RGB to sRGB primaries
-	my($rgb) = $in->new_or_inplace();
-
-	# Slow and lame -- would work far better as a pp routine...
-	$rgb .= 
-	    (  ($in <= 0.00304) * 12.92 * $rgb ) +
-	    (  ($in  > 0.00304) * (
-		   (  1.055 * ($in * ($in->abs ** (1.0/2.4 - 1) ) ) )  - 0.055
-	       )
-	    );
-
-	my $out;
-
-	$rgb *= 255;
-	if($opt->{byte}) {
-	    $out = byte( $rgb->rint->clip(0,255) );
-	} elsif($opt->{clip}) {
-	    $out = $rgb->clip(0,255.49999);
-	} else {
-	    $out = $rgb;
-	}
-
-	$out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-	
-	my $rgb = $in / pdl(255.0);
-
-	my $rgb2 = ($rgb+0.055)/1.055;
-	$rgb .=
-	    ( ($rgb <= 0.03928) * $rgb / 12.92 ) +
-	    ( $rgb   > 0.03928) * (
-		$rgb2 * (($rgb2->abs)**1.4)
-	    );
-
-	$rgb;
-    };
-
-    return gammify($me);
-}
-
-##############################
-# Reference illuminants
-# (aka "white points")
-
 =head2 PDL::Transform::Color::xyy_from_D
 
 =usage
@@ -582,72 +356,6 @@ C<xyy_from_D> accepts the following options:
 =back
 
 =cut
-    
-sub xyy_from_D {
-    my $D = pdl(shift);
-    my $u_opt = shift || {};
-    my %opt = parse({
-	Y=>1
-		    },
-	$u_opt);
-
-    die "cie_xy_from_D: D must be between 40 and 250" if(any($D< 40) || any($D > 250));
-    my $T = $D*100;
-
-    my $Xd;
-    $Xd = ($D<=70) * ( 0.244063 + 0.09911e3/$T + 2.9678e6/$T/$T - 4.6070e9/$T/$T/$T ) +
-	  ($D> 70) * ( 0.237040 + 0.24748e3/$T + 1.9018e6/$T/$T - 2.0064e9/$T/$T/$T );
-
-    return pdl( $Xd, -3*$Xd*$Xd + 2.870*$Xd - 0.275, $opt{Y} )->mv(-1,0)->sever;
-}
-
-# xy data for FL3.x standards, from CIE "Colorimetry" 3rd edition Table T.8.2
-my $fl3tab = [
-    [],
-    [0.4407, 0.4033],
-    [0.3808, 0.3734],
-    [0.3153, 0.3439],
-    [0.4429, 0.4043],
-    [0.3749, 0.3672],
-    [0.3488, 0.3600],
-    [0.4384, 0.4045],
-    [0.3820, 0.3832],
-    [0.3499, 0.3591],
-    [0.3455, 0.3460],
-    [0.3245, 0.3434],
-    [0.4377, 0.4037],
-    [0.3830, 0.3724],
-    [0.3447, 0.3609],
-    [0.3127, 0.3288]
-    ];
-# xy data for FLx standards, from CIE "Colorimetry" 3rd edition Table T.7
-my $fltab = [
-    [],
-    [0.3131, 0.3371],
-    [0.3721, 0.3751],
-    [0.4091, 0.3941],
-    [0.4402, 0.4031],
-    [0.3138, 0.3452],
-    [0.3779, 0.3882],
-    [0.3129, 0.3292],
-    [0.3458, 0.3586],
-    [0.3741, 0.3727],
-    [0.3458, 0.3588],
-    [0.3805, 0.3769],
-    [0.4370, 0.4042]
-    ];
-# xy data for HPx standards, from CIE "Colorimetry" 3rd edition table T.9
-my $hptab = [
-    [],
-    [0.5330, 0.4150],
-    [0.4778, 0.4158],
-    [0.4302, 0.4075],
-    [0.3812, 0.3797],
-    [0.3776, 0.3713]
-    ];
-    
-
-
 =head2 PDL::Transform::Color::xyy_from_illuminant
 
 =usage
@@ -706,112 +414,6 @@ The CIE names are:
 =back
 
 =cut
-
-sub xyy_from_illuminant {
-    my $name = shift;
-    if(UNIVERSAL::isa($name,"PDL")) {
-	if(($name->nelem==2 || $name->nelem==3) && $name->dim(0)==$name->nelem) {
-	    return $name;
-	} else {
-	    die "xyy_from_illuminant:  PDL must be a 2-PDL or a 3-PDL";
-	}
-    }
-    my $u_opt = shift || {};
-    my %opt = parse({ 
-	Y=>1
-		    }, $u_opt);
-    if($name =~ m/^A/i) {
-	return pdl(0.44758, 0.40745, $opt{Y});
-    } elsif($name =~ m/^B/) {
-	die "Illuminant B is not supported (deprecated by CIE)";
-    } elsif($name =~ m/^C/) {
-	return pdl(0.31006, 0.31616, $opt{Y});
-    } elsif( $name =~ m/^D(.*)$/i) {
-	return xyy_from_D($1,$u_opt);
-    } elsif( $name =~ m/^E/i) {
-	return pdl(0.33333,0.33333,$opt{Y});
-    } elsif( $name =~ m/^FL?([\d+])(\.[\d])?$/i) {
-	my $flno = $1+0;
-	my $flsubno = $2+0;
-	die "Illuminant $name not recognized (FL1-FL12, or FL3.1-FL3.15)"
-	    if($flno < 1 || $flno > 12 || 
-	       ($flsubno && $flno != 3) ||
-	       ($flsubno > 15)
-	    );
-
-	if($flno==3 && $flsubno) {
-	    return pdl(@{$fl3tab->[$flsubno]},$opt{Y});
-	} else {
-	    return pdl(@{$fltab->[$flno]},$opt{Y});
-	}
-    } elsif( $name =~ m/^HP?(\d)/i ) {
-	my $hpno = $1+0;
-	die "Unknown HP illuminant no. $hpno" if($hpno<1 || $hpno > 5);
-	return pdl(@{$hptab->[$hpno]}, $opt{Y});
-    } elsif( $name =~ m/^L/i) {
-	die "Illuminant L is not (yet) supported";
-    } else {
-	die "Unknown illuminant $name";
-    }
-}
-
-
-##############################
-# Database of standard RGB color systems from Bruce Lindbloom
-# Make a database of xyY values of primaries, illuminants, and standard gammas for common RGB systems
-# Also stash matrices for converting those systems to lsRGB.
-#
-# Columns:  gamma, illuminant, xyY for R (3 cols), xyY for G (3 cols), xyY for B (3 cols), abbrev char count
-our $rgbtab_src = {
-    "Adobe"        => [2.2, "D65", 0.6400, 0.3300, 0.297361, 0.2100, 0.7100, 0.627355, 0.1500, 0.0600, 0.075285, 2],
-    "Apple"        => [1.8, "D65", 0.6250, 0.3400, 0.244634, 0.2800, 0.5950, 0.672034, 0.1550, 0.0700, 0.083332, 2],
-    "Best"         => [2.2, "D50", 0.7347, 0.2653, 0.228457, 0.2150, 0.7750, 0.737352, 0.1300, 0.0350, 0.034191, 3],
-    "Beta"         => [2.2, "D50", 0.6888, 0.3112, 0.303273, 0.1986, 0.7551, 0.663786, 0.1265, 0.0352, 0.032941, 3],
-    "Bruce"        => [2.2, "D65", 0.6400, 0.3300, 0.240995, 0.2800, 0.6500, 0.683554, 0.1500, 0.0600, 0.075452, 2],
-    "BT 601"       => [2.2, "D65", 0.6300, 0.3400, 0.299000, 0.3100, 0.5950, 0.587000, 0.1550, 0.0700, 0.114000, 3],
-    "BT 709"       => [2.2, "D65", 0.6300, 0.3400, 0.212600, 0.3100, 0.5950, 0.715200, 0.1550, 0.0700, 0.072200, 3],
-    "CIE"          => [2.2, "E",   0.7350, 0.2650, 0.176204, 0.2740, 0.7170, 0.812985, 0.1670, 0.0090, 0.010811, 2],
-    "ColorMatch"   => [1.8, "D50", 0.6300, 0.3400, 0.274884, 0.2950, 0.6050, 0.658132, 0.1500, 0.0750, 0.066985, 2],
-    "Don 4"        => [2.2, "D50", 0.6960, 0.3000, 0.278350, 0.2150, 0.7650, 0.687970, 0.1300, 0.0350, 0.033680, 1],
-    "ECI v2"       => [1.0, "D50", 0.6700, 0.3300, 0.320250, 0.2100, 0.7100, 0.602071, 0.1400, 0.0800, 0.077679, 2],
-    "Ekta PS5"     => [2.2, "D50", 0.6950, 0.3050, 0.260629, 0.2600, 0.7000, 0.734946, 0.1100, 0.0050, 0.004425, 2],
-    "NTSC"         => [2.2, "C",   0.6700, 0.3300, 0.298839, 0.2100, 0.7100, 0.586811, 0.1400, 0.0800, 0.114350, 1],
-    "PAL"          => [2.2, "D65", 0.6400, 0.3300, 0.222021, 0.2900, 0.6000, 0.706645, 0.1500, 0.0600, 0.071334, 2],
-    "ProPhoto"     => [1.8, "D50", 0.7347, 0.2653, 0.288040, 0.1596, 0.8404, 0.711874, 0.0366, 0.0001, 0.000086, 2],
-    "ROMM"         => [1.8, "D50", 0.7347, 0.2653, 0.288040, 0.1596, 0.8404, 0.711874, 0.0366, 0.0001, 0.000086, 2],
-    "SECAM"        => [2.2, "D65", 0.6400, 0.3300, 0.222021, 0.2900, 0.6000, 0.706645, 0.1500, 0.0600, 0.071334, 2],
-    "SMPTE-C"      => [2.2, "D65", 0.6300, 0.3400, 0.212395, 0.3100, 0.5950, 0.701049, 0.1550, 0.0700, 0.086556, 2],
-    "sRGB"         => [2.2, "D65", 0.6300, 0.3400, 0.212395, 0.3100, 0.5950, 0.701049, 0.1550, 0.0700, 0.086556, 2],
-    "wgRGB"        => [2.2, "D50", 0.7350, 0.2650, 0.258187, 0.1150, 0.8260, 0.724938, 0.1570, 0.0180, 0.016875, 1]
-};
-
-##############################
-# RGB color systems in more code-approachable form.  Parse the table to create hash refs by name, and an
-# abbrev table that allows abbreviated naming
-#
-our $rgbtab = {};
-our $rgb_abbrevs = {};
-for my $k(keys %$rgbtab_src) {
-    my $v = $rgbtab_src->{$k};
-    $rgbtab->{$k} = {
-	gamma  => $v->[0],
-	w_name => $v->[1],
-	w      => xyy_from_illuminant($v->[1]),
-	r      => pdl($v->[2],$v->[3],$v->[4]),
-	g      => pdl($v->[5],$v->[6],$v->[7]),
-	b      => pdl($v->[8],$v->[9],$v->[10])
-    };
-    my $str = $k;
-    $str =~ tr/A-Z/a-z/;
-    $str =~ s/\s\-//g;
-    for my $i($v->[11]..length($str)){
-	$rgb_abbrevs->{substr($str,0,$i)} = $k;
-    }
-}
-
-# Gets an rgb descriptor hash from an input that might be a hash or a name.
-# If it's a hash, check to make sure it's copacetic.
-
 =head2 PDL::Transform::Color::get_rgb
 
 =for usage 
@@ -890,31 +492,6 @@ Recognized RGB system names are:
 =back
     
 =cut
-    
-sub get_rgb {
-    my $new_rgb = shift;
-    unless(ref $new_rgb) {
-	$new_rgb=~tr/A-Z/a-z/; $new_rgb =~ s/\s\-//g;
-	my $new_rgb_name = $rgb_abbrevs->{$new_rgb};
-	if($rgbtab->{$new_rgb_name}) {
-	    $new_rgb = $rgbtab->{$new_rgb_name};
-	} else {
-	    die "Unknown RGB system '$new_rgb'\nKnown ones are:\n\t".join("\n\t",((sort keys %$rgbtab),""));
-	}
-    } elsif(ref $new_rgb eq 'HASH') {
-	my $bad = 0;
-	for my $k(qw/w r g b/) {
-	    $bad = 1 unless( exists($new_rgb->{$k}) and defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
-	}
-	$new_rgb->{gamma} = 1 unless defined($new_rgb->{gamma});
-	die "Incorrect RGB primaries hash -- see docs" if($bad);
-    } else {
-	die "bad RGB specification -- see docs";
-    }
-    return $new_rgb;
-}
-
-
 =head2 t_shift_illuminant
 
 =for ref
@@ -957,91 +534,6 @@ C<http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html>)
 =back
 
 =cut
-
-sub t_shift_illuminant {
-    my $new_illuminant = shift;
-    my($me) = _new(@_, 'New illuminant',
-		   {gamma =>1,
-		    from => "D65",
-		    basis => 'rgb',
-		    method=>"Bradford"
-		   }
-	);
-
-    unless(UNIVERSAL::isa($new_illuminant, 'PDL')) {
-	$new_illuminant = xyy_from_illuminant($new_illuminant);
-    }
-    unless(UNIVERSAL::isa($me->{params}->{from}, 'PDL')) {
-	$me->{params}->{from} = xyy_from_illuminant($me->{params}->{from});
-    }
-    $me->{params}->{to} = $new_illuminant;
-
-    if(UNIVERSAL::isa($me->{params}->{method},"PDL")) {
-	print "PDL\n";
-	if($me->{params}->{method}->ndims==2 && 
-	   $me->{params}->{method}->dim(0)==3 &&
-	   $me->{params}->{method}->dim(1)==3) {
-	    $me->{params}->{Ma} = $me->{params}->{method}->copy;
-	} else {
-	    die "t_new_illuminant: method must be a 3x3 matrix or {Bradford|Von Kries|XYZ}";
-	}
-    } elsif( $me->{params}->{method} =~ m/^B/i || length($me->{params}->{method})==0) {
-	# Bradford
-	$me->{params}->{Ma} = pdl( [  0.8951000,  0.2664000, -0.1614000 ],
-				   [ -0.7502000,  1.7135000,  0.0367000 ],
-				   [  0.0389000, -0.0685000,  1.0296000 ]
-	    );
-    } elsif($me->{params}->{method} =~ m/^[VK]/i) {
-	# von Kries or Kries
-	$me->{params}->{Ma} = pdl( [  0.4002400,  0.7076000, -0.0808100 ],
-				   [ -0.2263000,  1.1653200,  0.0457000 ],
-				   [  0.0000000,  0.0000000,  0.9182200 ]
-	    );
-    } elsif($me->{params}->{method} =~ m/^[XC]/i) {
-	# XYZ or CIE
-	$me->{params}->{Ma} = pdl( [1, 0, 0], [0, 1, 0], [0, 0, 1] );
-    } else {
-	print "Unknown method '$me->{params}->{method}'\n";
-    }
-
-    $me->{params}->{Ma_inv} = $me->{params}->{Ma}->inv;
-
-    $me->{func} = sub {
-	my($in, $opt) = @_;
-	my $rhgabe_fr = ( $opt->{Ma} x $opt->{from}->(*1) )->((0))->sever;
-	my $rhgabe_to = ( $opt->{Ma} x $opt->{to}  ->(*1) )->((0))->sever;
-	my $M = $opt->{Ma_inv} x ( ( $rhgabe_to / $rhgabe_fr )->(*1) * $opt->{Ma} );
-
-	if($opt->{basis} =~ m/^X/i) {
-	    return  ((  $M x $in->(*1) )->((0))->sever);
-	} else {
-	    return  ((  ( $srgb2cxyz_inv x $M x $srgb2cxyz_mat ) x $in->(*1)  )->((0))->sever);
-	}
-	
-    };
-
-    $me->{inv} = sub {
-	my($in, $opt) = @_;
-	my $rhgabe_fr = ( $opt->{Ma} x $opt->{from}->(*1) )->((0))->sever;
-	my $rhgabe_to = ( $opt->{Ma} x $opt->{to}  ->(*1) )->((0))->sever;
-	my $M = $opt->{Ma_inv} x ( ( $rhgabe_fr / $rhgabe_to )->(*1) * $opt->{Ma} );
-
-	if($opt->{basis} =~ m/^X/i) {
-	    return (( $M x $in->(*1)  )->((0))->sever);
-	} else {
-	    return (( ( $srgb2cxyz_inv x $M x $srgb2cxyz_mat ) x $in->(*1)  )->((0))->sever);
-	}
-    };
-
-    if(exists($me->{params}->{gamma}) &&
-       defined($me->{params}->{gamma}) &&
-       $me->{params}->{gamma} != 1) {
-	return (  t_gamma(1.0/$me->{params}->{gamma}) x $me x t_gamma($me->{params}->{gamma}) );
-    } else {
-	return $me;
-    }
-}
-
 =head2 t_shift_rgb 
 
 =for usage
@@ -1096,45 +588,6 @@ system to convert to (names or a hash ref as described).
 =back
 
 =cut
-
-sub t_shift_rgb {
-    my $new_rgb = shift;
-    my($me) = _new(@_, 'New RGB system',
-		   {gamma =>1,
-		    ogamma=>undef,
-		    use_system_gammas=>0,
-		    wp_method=>undef,
-		    from=>"sRGB"
-		   }
-	);
-
-
-    my $to_rgb   = get_rgb($new_rgb);
-    my $from_rgb = get_rgb($me->{params}->{from});
-
-    my ($from_gamma, $to_gamma);
-    if($me->{params}->{use_system_gammas}) {
-	$from_gamma = $me->{params}->{from_rgb}->{gamma};
-	$to_gamma   = $me->{params}->{to_rgb}->{gamma};
-    } else {
-	$from_gamma = $me->{params}->{gamma};
-	$to_gamma   = $me->{params}->{ogamma} // $me->{params}->{gamma};
-    }
-
-    my $out = 
-	!t_xyz(rgb_system=>$to_rgb, gamma=>$me->{params}->{gamma}, use_system_gamma=>$me->{params}->{use_system_gamma}) x 
-	t_shift_illuminant($to_rgb->{w},basis=>"XYZ",from=>$from_rgb->{w},method=>$me->{params}->{wp_method}) x 
-	t_xyz(rgb_system=>$from_rgb, gamma=>$me->{params}->{gamma}, use_system_gamma=>$me->{params}->{use_system_gamma});
-
-    return $out;
-
-}		    
-
-
-
-##############################
-
-
 =head2 t_rgi
 
 =for ref
@@ -1145,44 +598,6 @@ Note that intensity is just the average of the R, G, and B values.
 If you want perceptible luminance, use t_rgl or t_ycbcr instead.
 
 =cut
-
-sub t_rgi {
-    my($me) = _new(@_, 'RGI',
-		   {gamma=>1,
-		   }
-	);
-
-    $me->{func} = sub {
-	my($in,$opt) = @_;
-	my $i = $in->sumover->(*1);
-	my $out = zeroes($in);
-	$out->(0:1) .= $in(0:1) / ($i+($i==0));
-	$out->(2) .= $i/3;
-	if($in->is_inplace) {
-	    $in .= $out;
-	    return $in;
-	}
-	return $out;
-    };
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-	my $out = zeroes($in);
-	$out->(0:1) .= $in(0:1);
-	$out->((2)) .= 1 - $in(0:1)->sumover;
-	$out *= $in->(2) * 3;
-	if($in->is_inplace) {
-	    $in .= $out;
-	    return $in;
-	}
-	return $out;
-    };
-
-    return $me;
-}
-
-
-##############################
-
 =head2 t_cieXYZ, t_xyz
 
 =for ref
@@ -1225,86 +640,6 @@ or a hash), this flag is ignored.
 =back
 
 =cut
-
-
-*t_cieXYZ = \&t_xyz;
-
-sub t_xyz {
-    my ($me) = _new(@_, 'CIE XYZ',
-		    {gamma=>1,
-		     rgb_system=>undef,
-		     use_system_gamma=>0
-		    }
-	);
-
-    # shortcut the common case
-    unless(defined($me->{params}->{rgb_system})) {
-
-	$me->{params}->{mat} = $srgb2cxyz_mat;
-	$me->{params}->{inv} = $srgb2cxyz_inv;
-		
-    } else {
-	my $rgb = get_rgb($me->{params}->{rgb_system});
-
-	my ($xr,$yr) = ($rgb->{r}->((0)),$rgb->{r}->((1)));
-	my ($xg,$yg) = ($rgb->{g}->((0)),$rgb->{g}->((1)));
-	my ($xb,$yb) = ($rgb->{b}->((0)),$rgb->{b}->((1)));
-	
-	my $Xr = $xr / ($yr + ($yr==0));
-	my $Yr = 1;
-	my $Zr = (1 - $xr - $yr)/($yr+($yr==0));
-	my $Xg = $xg / ($yg + ($yg==0));
-	my $Yg = 1;
-	my $Zg = (1 - $xg - $yg)/($yg+($yg==0));
-	my $Xb = $xb / ($yb + ($yb==0));
-	my $Yb = 1;
-	my $Zb = (1 - $xb - $yb)/($yb+($yb==0));
-
-	my $M = pdl( [ $Xr, $Xg, $Xb ], [$Yr, $Yg, $Yb], [$Zr, $Zg, $Zb] );
-	my $Minv = $M->inv;
-
-	my ($xw, $yw, $Yw) = ($rgb->{w}->((0)),$rgb->{w}->((1)),$rgb->{w}->((2)));
-	my $Xw = $xw * $Yw / ($yw + ($yw==0));
-	my $Zw = (1 - $xw - $yw)*$Yw / ($yw+($yw==0));
-	my $XYZw = pdl($Xw,$Yw,$Zw);
-
-	my $Srgb = ($Minv x $XYZw->(*1))->((0)); # row vector
-	$M *= $Srgb;
-	$me->{params}->{mat} = $M;
-	$me->{params}->{inv} = $M->inv;
-
-	if($me->{params}->{use_system_gamma}) {
-	    $me->{params}->{gamma} = $rgb->{gamma};
-	}
-    }
-
-    # func and inv get linearized versions (gamma handled below)
-    $me->{func} = sub {
-	my($in, $opt) = @_;
-
-	my $out = ( $opt->{mat} x $in->(*1) )->((0))->sever;
-	
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-	return $out;
-    };
-
-    $me->{inv} = sub {
-	my($in, $opt) = @_;
-	my $out = ( $opt->{inv} x $in->(*1) )->((0))->sever;
-
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-	return $out;
-    };
-
-    return gammify($me);
-}
-
 =head2 t_xyy
 
 =head2 t_xyY
@@ -1326,46 +661,6 @@ smaller than the actual visual gamut, which in turn is a subset of the
 actual xyY data space. 
 
 =cut
-
-*t_xyY = \&t_xyy;
-
-sub t_xyy {
-    my ($me) = _new(@_, 'CIE xyY',
-		    {gamma=>1,
-		    }
-	);
-
-    $me->{func} = sub {
-	my($XYZ, $opt) = @_;
-	my $out = $XYZ/$XYZ->sumover->(*1);
-	$out->((2)) .= $XYZ->((1));
-	if($XYZ->is_inplace) {
-	    $XYZ .= $out;
-	    $out = $XYZ;
-	}
-	return $out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-	# make xYy
-	my $XYZ = zeroes($in);
-
-	# stuff X and Z in there.
-	my $in1 = $in->((1))+($in->((1))==0);
-	$XYZ->((0)) .= $in->((0)) * $in->((2)) / $in1;
-	$XYZ->((1)) .= $in->((2));
-	$XYZ->((2)) .= $in->((2)) * (1 - $in->((0)) - $in->((1))) / $in1;
-	
-	if($in->is_inplace) {
-	    $in .= $XYZ;
-	    $XYZ = $in;
-	}
-	return $XYZ;
-    };
-    return gammify( $me x t_xyz() );
-}
-
 =head2 
 	
 
@@ -1404,66 +699,6 @@ If present, the CMYK side is scaled to 0-255 and converted to a byte type.
 =back
 
 =cut
-;
-sub t_cmyk {
-    my($me) = _new(@_, "CMYK",
-		   {gamma=>1,
-		    pigment=>0,
-		    density=>2,
-		    htgamma=>1,
-		    clip=>0,
-		    byte=>0
-		   }
-	);
-    $me->{idim} = 3;
-    $me->{odim} = 4;
-
-    $me->{func} = sub {
-	my($in,$opt) = @_;
-	my $out = zeroes( 4, $in->((0))->dims );
-	
-	my $Kp = $in->maximum->(*1);
-	(my $K = $out->(3)) .= 1 - $Kp;
-	$out->(0:2) .= ($Kp - $in->(0:2)) / $Kp;
-	$out->((3))->where($Kp==0) .= 1;
-	$out->(0:2)->mv(0,-1)->where($Kp==0) .= 0;
-
-	if(defined($opt->{htgamma}) && $opt->{htgamma} != 1) {
-	    $out *= ($out->abs) ** ($opt->{htgamma} - 1);
-	}
-
-	if($opt->{clip}) {
-	    $out->inplace->clip(0,1);
-	}
-
-	if($opt->{byte}) {
-	    $out = (256*$out)->clip(0,255.99999);
-	}
-	return $out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-	my $out = zeroes( 3, $in->((0))->dims );
-
-	$in = $in->new_or_inplace;
-	
-	if($opt->{byte}) {
-	    $in = $in / pdl(256); # makes copy
-	}
-
-	if(defined($opt->{htgamma}) && $opt->{htgamma} != 1) {
-	    $in *= ($in->abs) ** (1.0/$opt->{htgamma} - 1);
-	}
-	my $Kp = 1.0 - $in->(3);
-	$out .= $Kp * ( 1 - $in->(0:2) );
-	return $out;
-    };
-
-    return gammify($me);
-
-}
-
 =head2 t_cielab or t_lab
 
 =for usage
@@ -1491,28 +726,6 @@ Lab is easiest to convert directly from XYZ space, so the C<t_lab> constructor
 returns a compound transform of C<t_xyz2lab> and C<t_xyz>.
 
 =cut
-
-sub f_lab {
-    my $in = shift;
-    my $delta = 6/29;
-    my $delta3 = $delta * $delta * $delta;
-    return ( 
-	($in >  $delta3) * ( $in * (($in->abs+($in==0)) ** (0.333-1)) ) +
-	($in <= $delta3) * ( $in / (3 * $delta * $delta) + 4/29 )
-	);
-}
-
-
-sub f_lab_inv {
-    my $in = shift;
-    my $delta = 6/29;
-
-    return (
-	($in >  $delta) * ($in*$in*$in) +
-	($in <= $delta) * (3 * $delta * $delta * ($in - 4/29))
-	);
-}
-
 =head2 t_xyz2lab
 
 =for usage
@@ -1524,77 +737,6 @@ sub f_lab_inv {
 Converts CIE XYZ to CIE Lab.
 
 =cut
-    
-sub t_xyz2lab {
-	
-    my ($me) = _new(@_,'XYZ->Lab',
-		    {
-			white=>"D65",
-		    }
-	);
-
-    # get and store illuminant XYZ
-    my $wp_xyy = xyy_from_illuminant($me->{params}->{white});
-    $me->{params}->{wp_xyz} = $wp_xyy->copy;
-    $me->{params}->{wp_xyz}->(2) .= 1 - $wp_xyy->(0) - $wp_xyy->(1);
-    $me->{params}->{wp_xyz} *= $wp_xyy->(2);
-    
-
-    # input is XYZ by the time it gets here
-    $me->{func} = sub {
-	my($in,$opt) = @_;
-	my($out) = zeroes($in);
-
-	my $wp = $opt->{wp_xyz} + ($opt->{wp_xyz}==0);
-	
-	my $FYp = f_lab(  $in->((1)) / $wp->((1))  );
-	    
-	$out->((0)) .= 116 * $FYp - 16;
-	$out->((1)) .= 500 * ( f_lab( $in->((0)) / $wp->((0)) ) - $FYp   );
-	$out->((2)) .= 200 * ( $FYp - f_lab( $in->((2)) / $wp->((2)) ) );
-
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-	return $out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-	my($out) = zeroes($in);
-
-	my $Lterm = ($in->((0))+16)/116;
-	
-	$out->((0)) .= $opt->{wp_xyz}->((0)) * f_lab_inv( $Lterm + $in->((1))/500 );
-	$out->((1)) .= $opt->{wp_xyz}->((1)) * f_lab_inv( $Lterm );
-	$out->((2)) .= $opt->{wp_xyz}->((2)) * f_lab_inv( $Lterm - $in->((2))/200 );
-
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-	return $out;
-    };
-    
-    return $me;
-}
-
-
-sub t_lab {
-    my ($me) = _new(@_, 'Lab',
-		    {
-			gamma => 1.0,
-			white=>'D65',
-		    }
-	);
-    return ( 
-	t_xyz2lab(white=>$me->{params}->{white} )  x
-	t_xyz( gamma=>$me->{params}->{gamma})
-	);
-}
-
-
 =head2 t_hsl and t_hsv
 
 =for usage
@@ -1651,93 +793,6 @@ Sets which of the HSL/HSV transform is to be used.
 =back
 
 =cut
-
-sub t_hsl {
-    my($me) = _new(@_,"HSL",
-		   {gamma=>1,
-		    lgamma=>1,
-		    hsv=>0
-		   }
-	);
-
-    $me->{name} = "HSV" if($me->{params}->{hsv});
-    
-    $me->{func} = sub {
-	my($in, $opt) = @_;
-	my $out = zeroes($in);
-	
-	my $Cmax = $in->maximum;
-	my $Cmin = $in->minimum;
-	my $maxdex = $in->qsorti->((2))->sever;
-	my $Delta = ( $Cmax - $Cmin );
-
-	my $dexes = ($maxdex->(*1) + pdl(0,1,2)) % 3;
-
-	my $H = $out->((0));
-	$H .= (  ($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)) + 2 * $dexes->((0))  )  /  6;
-	$H += ($H<0);
-
-	# Lightness and Saturation
-	my $L = $out->((2));
-	if($opt->{hsv}) {
-	    $L .= $Cmax;
-	    $out->((1)) .= $Delta / ($L + ($L==0));
-	} else {
-	    $L .= ($Cmax + $Cmin)/2;
-	    $out->((1)) .= $Delta / (1 - (2*$L-1)->abs + ($L==0 | $L==1));
-	}
-	
-
-	if( $opt->{lgamma} != 1 ){
-	    $L .= $L * (($L->abs + ($L==0)) ** (1.0/$opt->{lgamma} - 1));
-	}
-
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-	return $out;
-    };
-
-    $me->{inv} = sub {
-	my($in,$opt) = @_;
-
-	my $H = $in->((0))*6;
-	my $S = $in->((1));
-	my $L = $in->((2));
-
-	if($opt->{lgamma} != 1) {
-	    $L = $L * (($L->abs + ($L==0)) ** ($opt->{lgamma}-1));
-	}
-	
-	my $ZCX = zeroes($in);
-	my $C = $ZCX->((1));
-	my $m;
-	if($opt->{hsv}) {
-	    $C .= $L * $S;
-	    $m = $L - $C;
-	} else {
-	    $C .= (1 - (2*$L - 1)->abs) * $S;
-	    $m = $L - $C/2;
-	}
-
-	$ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
-
-	my $dexes = pdl( [1,2,0], [2,1,0], [0,1,2], [0,2,1], [2,0,1], [1,0,2] )->mv(1,0)->sever;
-	my $dex = $dexes->index1d($H->floor->(*1,*1))->((0))->sever; # 3x(threads)
-	my $out = $ZCX->index1d($dex)->sever + $m->(*1);
-
-	if($in->is_inplace) {
-	    $in .= $out;
-	    $out = $in;
-	}
-
-	return $out;
-    };
-
-    return gammify($me);
-}
-
 =head2 t_hsv
 
 =for ref
@@ -1746,17 +801,3 @@ Implements the HSV transfromation, which is similar to HSL except that it fades
 to light instead of to grey.  See the documentation for C<t_hsl> for details.
 
 =cut
-
-sub t_hsv {
-        my($me) = _new(@_,"HSL",
-		   {gamma=>1,
-		    lgamma=>1,
-		    hsv=>1
-		   }
-	);
-	return t_hsl(%{$me->{params}});
-}
-		    
-
-
-1;
