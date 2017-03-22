@@ -90,7 +90,6 @@ instead.  For example, to export a color in the CIE RGB system
 There are also some pseudocolor transformations, which convert a
 single data value to normalized RGB.
 
-
 =head1 OVERVIEW OF COLOR THEORY
 
 Beacuse of the biophysics of the human eye, color is well represented
@@ -238,13 +237,13 @@ package PDL::Transform::Color;
 use PDL::Core ':Internal';  # load "topdl" (internal routine)
 
 @ISA = ( 'Exporter', 'PDL::Transform' );
-our $VERSION = '0.1';
+our $VERSION = '1.001';
 $VERSION = eval $VERSION;
 
 BEGIN {
     package PDL::Transform::Color;
     use base 'Exporter';
-    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv /;
+    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc/;
     @EXPORT = @EXPORT_OK;
     %EXPORT_TAGS = (Func=>[@EXPORT_OK]);
 };
@@ -1753,7 +1752,7 @@ sub t_hsl {
 	$ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
 
 	my $dexes = pdl( [1,2,0], [2,1,0], [0,1,2], [0,2,1], [2,0,1], [1,0,2] )->mv(1,0)->sever;
-	my $dex = $dexes->index1d($H->floor->(*1,*1))->((0))->sever; # 3x(threads)
+	my $dex = $dexes->index1d($H->floor->(*1,*1) % 6)->((0))->sever; # 3x(threads)
 	my $out = $ZCX->index1d($dex)->sever + $m->(*1);
 
 	if($in->is_inplace) {
@@ -1771,7 +1770,7 @@ sub t_hsl {
 
 =for ref
 
-Implements the HSV transfromation, which is similar to HSL except that it fades
+Implements the HSV transformation, which is similar to HSL except that it fades
 to light instead of to grey.  See the documentation for C<t_hsl> for details.
 
 =cut
@@ -1785,7 +1784,130 @@ sub t_hsv {
 	);
 	return t_hsl(%{$me->{params}});
 }
-		    
+
+
+######################################################################
+######################################################################
+
+=head2 t_pc 
+
+=for ref 
+
+Implements a general purpose pseudocolor transformation.  You input a
+monochromatic value (zero active dims) and get out an RGB value (one
+active dim, size 3).  Because sRGB is so commonly used, the default
+output is sRGB -- you have to set a flag for lsRGB output,
+for example if you want to produce output in some other system by
+composing t_pc with a color transformation.
+
+NOTE: C<t_pc> works BACKWARDS from most of the transformations in this
+package:  it converts FROM a data value TO sRGB or lsRGB.
+
+There are options to adjust input gamma and the domain of the
+transformation (e.g. if your input data are on [0,1000]).
+
+If you feed in no arguments at all, t_pc lists a collection of named
+pseudocolor transformations that work.  You can write your own by putting
+them into the package global hash ref C<$PDL::Transform::Color::pc_tab>.
+
+Options accepted are:
+
+=over 3
+
+=item gamma (default 1) - presumed encoding gamma of the input
+
+The input is *decoded* from this gamma value.  1 treats it as linear
+in luminance.  
+
+=item lsRGB (default 0) - produce lsRGB output instead of sRGB.
+
+=item domain - domain of the input; synonym for irange.
+
+=item irange (default [0,1]) - input range of the data
+
+Input data are by default clipped to [0,1] before application of the
+color map.  Specifying an undefined value causes the color map to be
+autoscaled to the input data, e.g. C<ir=>[0,undef]> causes the color map
+to be scaled from 0 to the maximum value of the input.  For full 
+autoscaling, use C<ir=>[]>.
+
+=back
+
+=cut
+
+
+## pc_tab defines transformation subs for R, G, B from the grayscale.  The initial few are translated
+## direct from the C<$palettesTab> in C<PDL::Graphics::Gnuplot>; others follow.
+## Input is on the domain [0,1].  Output is clipped to [0,1] post facto.
+
+our $PI = 3.141592653589793238462643383279502;
+our $pc_tab = {
+    gray     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
+		  doc=>"greyscale" },
+
+    grey     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
+		  doc=>"greyscale" },
+
+    sepia    => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]},        sub{$_[0]**2}    ],
+		  doc=>"a simple sepiatone"    },
+
+    grepia   => { type=>'rgb', subs=> [ sub{$_[0]},       sub{sqrt($_[0])},  sub{$_[0]**2}    ],
+		  doc=>"a simple sepiatone, in green" },
+
+    blepia   => { type=>'rgb', subs=> [ sub{$_[0]**2},    sub{$_[0]},        sub{sqrt($_[0])} ],
+		  doc=>"a simple sepiatone, in blue"  },
+
+    vepia    => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]**2},     sub{sqrt($_[0])} ],
+		  doc=>"a simple sepiatone, in violet" },
+
+    pm3d     => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]**3},     sub{sin($_[0]*2*$PI)} ],
+		  doc=>"duplicates the PM3d colortable in gnuplot (RG colorblind)" },
+
+    grv      => { type=>'rgb', subs=> [ sub{$_[0]},     sub{abs($_[0]-0.5)}, sub{$_[0]**4}    ],
+		  doc=>"green-red-violet" },
+
+    ocean    => { type=>'rgb', subs=> [ sub{3*$_[0]-2}, sub{abs(3*$_[0]-1)/2},  sub{$_[0]}    ],
+		  doc=>"green-blue-white" },
+
+    rainbow  => { type=>'hsv', subs=> [ sub{$_[0]*0.82},     sub{1},               sub{1}          ],
+		  doc=>"rainbow red-yellow-green-blue-violet"},
+
+    wheel    => { type=>'hsv', subs=> [ sub{$_[0]},         sub{1},                sub{1}         ],
+		  doc=>"full color wheel red-yellow-green-blue-violet-red" },
+
+    heat1    => { type=>'rgb', subs=> [ sub{3*$_[0]},      sub{3*$_[0]-1},      sub{3*$_[0]-2} ],
+		  doc=>"heat-map: black-red-yellow-white" },
+
+    heat2    => { type=>'rgb', subs=> [ sub{2*$_[0]},      sub{2*$_[0]-0.5},    sub{2*$_[0]-1} ],
+		  doc=>"heat-map (AFM): black-red-yellow-white"},
+
+    rgb      => { type=>'rgb', subs=> [ sub{cos($_[0]*$PI/2)}, sub{sin($_[0]*$PI)}, sub{sin($_[0]*$PI/2)} ],
+		  doc=>"red-green-blue fade"},
+
+    dop      => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)},   sub{-1+2*$_[0]} ],
+		  doc=>"red-white-blue fade"},
+
+    dop2     => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{0},                  sub{-1+2*$_[0]} ],
+		  doc=>'red-black-blue fade (fully saturated)'},
+
+    dop3     => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{abs(sin(2*$PI*$_[0]))*0.33},  sub{-1+2*$_[0]}],
+		  doc=>'red-black-blue fade (gentle saturation near zero point)'}
+    
+};
+
+sub t_pc {
+    unless(0+@_){
+	my $s = "t_pc: named pseudocolor mappings available:\n";
+	our $pc_tab;
+	for my $k(sort keys %{$pc_tab}) {
+	    $s .= "  $k\t$pc_tab->{$k}->{doc}\n";
+	}
+	die $s."\n";
+    }
+}
+    
+
+
 
 
 1;
