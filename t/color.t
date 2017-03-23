@@ -2,7 +2,7 @@ use Test::More;
 
 
 BEGIN {
-    plan tests=>59;
+    plan tests=>63;
 
     use_ok('PDL::Transform::Color') || print "Bail out!\n";
 }
@@ -169,5 +169,18 @@ ok(all($slope->(1:-1) < $slope->(0:-2)),"slope is monotonically decreasing");
 eval { $aa = PDL::Transform::Color::_srgb_decode($b); };
 ok(!$@, "_srgb_decode ran ok");
 ok(all( ($aa > $a -1e-10) & ($aa < $a + 1e-10) ),"decoding undoes coding");
+
+##############################
+# test t_pc
+# (minimal testing)
+$a = xvals(101)/100;
+eval {$t = t_pc();};
+ok(($@ && $@=~m/^Usage\:/), "t_pc with no arguments died and threw out an info message");
+eval {$t = t_pc('sepia');};
+ok(!$@, "t_pc('sepia') ran OK");
+eval {$b=$a->apply($t);};
+ok(!$@, "t_pc applied OK");
+ok($b->ndims==2 && $b->dim(0)==3, "t_pc created an RGB output");
+
 
 
