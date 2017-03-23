@@ -1884,7 +1884,7 @@ our $pc_tab = {
 		  doc=>"greyscale", phot=>1 },
 
     blepia     => { type=>'rgb', subs=> [ sub{$_[0]**2},    sub{$_[0]},        sub{sqrt($_[0])} ],
-		  doc=>"a simple sepiatone, in blue" , ogamma=>2, igamma=>0.75 },
+		  doc=>"a simple sepiatone, in blue" , phot=>1, igamma=>0.75 },
 
     dop        => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)*2},   sub{2*$_[0]} ],
 		  doc=>"red-white-blue fade", ogamma=>2},
@@ -1899,22 +1899,22 @@ our $pc_tab = {
 		  doc=>"orange-black-blue", ogamma=>2 },
 
     grepia     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{sqrt($_[0])},  sub{$_[0]**2}    ],
-		  doc=>"a simple sepiatone, in green", ogamma=>2, igamma=>0.9, phot=>1 },
+		  doc=>"a simple sepiatone, in green", igamma=>0.9, phot=>1 },
 
     heat       => { type=>'rgb', subs=> [ sub{2*$_[0]},      sub{2*$_[0]-0.5},    sub{2*$_[0]-1} ],
-		  doc=>"heat-map (AFM): black-red-yellow-white", ogamma=>2, igamma=>0.667 },
+		  doc=>"heat-map (AFM): black-red-yellow-white", phot=>1, igamma=>0.667 },
 
     pm3d       => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]**3},     sub{sin($_[0]*2*$PI)} ],
-		  doc=>"duplicates the PM3d colortable in gnuplot (RG colorblind)", ogamma=>2 },
+		  doc=>"duplicates the PM3d colortable in gnuplot (RG colorblind)", phot=>1},
 
     grv        => { type=>'rgb', subs=> [ sub{sqrt($_[0]*0.5)},     sub{1-2*$_[0]},  sub{$_[0]**3.5}    ],
-		  doc=>"green-red-violet", ogamma=>2, igamma=>0.75 },
+		    doc=>"green-red-violet", igamma=>0.75, phot=>1 },
 
     monochrome => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},         sub{$_[0]}       ],
 		  doc=>"synonym for greyscale"},
 
     ocean      => { type=>'rgb', subs=> [ sub{(3*$_[0]-2)->clip(0) ** 2}, sub{$_[0]},  sub{$_[0]**0.33*0.5+$_[0]*0.5}    ],
-		  doc=>"green-blue-white", ogamma=>1, phot=>1, igamma=>0.8},
+		  doc=>"green-blue-white", phot=>1, igamma=>0.8},
 
     rainbow    => { type=>'hsv', subs=> [ sub{$_[0]*0.82},     sub{pdl(1)},               sub{pdl(1)}          ],
 		  doc=>"rainbow red-yellow-green-blue-violet"},
@@ -1923,10 +1923,10 @@ our $pc_tab = {
 		  doc=>"red-green-blue fade", phot=>1 },
 
     sepia      => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]},        sub{$_[0]**2}    ],
-		  doc=>"a simple sepiatone", phot=>1, ogamma=>1.8 },
+		  doc=>"a simple sepiatone", phot=>1  },
 
     vepia      => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]**2},     sub{sqrt($_[0])} ],
-		  doc=>"a simple sepiatone, in violet", phot=>1,ogamma=>1.6 },
+		  doc=>"a simple sepiatone, in violet", phot=>1, ogamma=>0.9 },
 
     wheel        => { type=>'hsv', subs=> [ sub{$_[0]},         sub{pdl(1)},                sub{pdl(1)}         ],
 		  doc=>"full color wheel red-yellow-green-blue-violet-red" },
