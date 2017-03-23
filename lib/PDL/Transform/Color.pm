@@ -237,7 +237,7 @@ package PDL::Transform::Color;
 use PDL::Core ':Internal';  # load "topdl" (internal routine)
 
 @ISA = ( 'Exporter', 'PDL::Transform' );
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 $VERSION = eval $VERSION;
 
 BEGIN {
@@ -513,7 +513,34 @@ C<byte> option is not set.
 =back
 
 =cut
-  
+
+# Helper routines do encoding on the domain [0,1].  These
+# are slow and lame with the multiplicative masking -- would do better as a PP routine...
+sub _srgb_encode {
+    my $a = shift;
+    my $b = $a->new_or_inplace;
+    $b .= ( 
+	($a <= 0.00304) * (12.92 * $a )  +
+	($a >  0.00304) * ( 
+	    (1.055 * ( $a * (($a->abs+1e-30) ** (1.0/2.4 - 1)) ) ) - 0.055
+	)
+	);
+    return $b;
+}
+
+sub _srgb_decode {
+    my $a = shift;
+    my $b = $a->new_or_inplace;
+    my $c = ($b+0.055)/1.055;
+    $b .= ( 
+	($a <= 0.03928) * ( $a / 12.92 ) +
+	($a >  0.03928) * (
+	    $c * ( $c->abs ** 1.4 )
+	)
+	);
+    return $b;
+}
+    
 sub t_srgb {
     my($me) = _new(@_,'encode 24-bit sRGB',
 		   {clip=>0,
@@ -528,13 +555,7 @@ sub t_srgb {
 	my($rgb) = $in->new_or_inplace();
 
 	# Slow and lame -- would work far better as a pp routine...
-	$rgb .= 
-	    (  ($in <= 0.00304) * 12.92 * $rgb ) +
-	    (  ($in  > 0.00304) * (
-		   (  1.055 * ($in * ($in->abs ** (1.0/2.4 - 1) ) ) )  - 0.055
-	       )
-	    );
-
+	_srgb_encode($rgb->inplace);
 	my $out;
 
 	$rgb *= 255;
@@ -554,12 +575,7 @@ sub t_srgb {
 	
 	my $rgb = $in / pdl(255.0);
 
-	my $rgb2 = ($rgb+0.055)/1.055;
-	$rgb .=
-	    ( ($rgb <= 0.03928) * $rgb / 12.92 ) +
-	    ( $rgb   > 0.03928) * (
-		$rgb2 * (($rgb2->abs)**1.4)
-	    );
+	_srgb_decode($rgb->inplace);
 
 	$rgb;
     };
@@ -1634,7 +1650,8 @@ sub t_lab {
 HSL stands for Hue, Saturation, Lightness.  It's not an absolute
 color space, simply derived from each RGB (by default, linearized
 sRGB).  it has the same gamut as the host RGB system.  The coordinates
-are hexagonal and follow the nearest face of the cube.
+are hexagonal on the (RYGCBM) hexagon, following the nearest face of 
+the (diagonally sliced) RGB cube.
 
 HSL is a double-cone system, so iso-L surfaces are close to the plane
 perpendicular to the double-diagonal white/illuminant line R=G=B.
@@ -1657,6 +1674,12 @@ S values greater than unity, or "illegal" V or L values.
 
 Hue, Saturation, and (Lightness or Value) each run from 0 to 1.  
 
+By default, the hue value follows a sin**4 scaling along each side of
+the RYGCBM hexagon.  This softens the boundaries near the edges of the
+RGB cube, giving a better peceptual "color-wheel" transition between 
+hues.  There is a flag to switch to the linear behavior described in,
+e.g., the Wikipedia article on the HSV system.
+
 You can encode the Lightness or Value with a gamma value ("lgamma") if 
 desired.
 
@@ -1676,6 +1699,14 @@ Treat the L coordinate as gamma-encoded (default 1 is linear).
 
 Sets which of the HSL/HSV transform is to be used.
 
+=item hue_linear (default 0)
+
+This flag determines how the hue ("angle") is calculated.  By default,
+a sin**4 scaling is used along each branch of the RYGCBM hexagon,
+to soften the perceptual effects at the corners.  If you set this flag,
+then the calculated "hue" is linear along each branch of the hexagon,
+to match (e.g.) the Wikipedia definition.
+
 =back
 
 =cut
@@ -1684,6 +1715,7 @@ sub t_hsl {
     my($me) = _new(@_,"HSL",
 		   {gamma=>1,
 		    lgamma=>1,
+		    hue_linear=>0,
 		    hsv=>0
 		   }
 	);
@@ -1703,23 +1735,26 @@ sub t_hsl {
 
 	my $H = $out->((0));
 
-	## Old linear method
-	# $H .= ( 
-	#    (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)))
-	#	+ 2 * $dexes->((0))  ) ;
-	#
-	# $H += 6*($H<0);
-	# $H /= 6;
-
-	## New hotness: smooth transitions at corners
-	my $Hint = 2*$dexes->((0));
-	my $Hfrac = (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)));
-	my $Hfs = -1*($Hfrac<0) + ($Hfrac >= 0);
-	$Hfrac .= $Hfs * (    asin(  ($Hfrac->abs) ** 0.25  ) * 2/$PI    );
-	$H .= $Hint + $Hfrac;
-	$H /= 6;
-	$H += ($H<0);
+	if($opt->{hue_linear}) {
+	    ## Old linear method
+	 $H .= ( 
+	    (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)))
+		+ 2 * $dexes->((0))  ) ;
 	
+	 $H += 6*($H<0);
+	 $H /= 6;
+	} else {
+	    ## New hotness: smooth transitions at corners
+	    my $Hint = 2*$dexes->((0));
+	    my $Hfrac = (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)));
+	    my $Hfs = -1*($Hfrac<0) + ($Hfrac >= 0);
+	    $Hfrac .= $Hfs * (    asin(  ($Hfrac->abs) ** 0.25  ) * 2/$PI    );
+	    $H .= $Hint + $Hfrac;
+	    $H /= 6;
+	}
+
+	$H += ($H<0);
+	    
 	# Lightness and Saturation
 	my $L = $out->((2));
 	if($opt->{hsv}) {
@@ -1764,12 +1799,14 @@ sub t_hsl {
 	    $m = $L - $C/2;
 	}
 
-	## Old linear method
-	# $ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
-
-	## New hotness: smooth transitions at corners.
-	$ZCX->((2)) .= $C * sin($PI/2 * (1 - ($H % 2 - 1)->abs))**4;
-
+	if($opt->{hue_linear}){
+	    ## Old linear method
+	    $ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
+	} else {
+	    ## New hotness: smooth transitions at corners.
+	    $ZCX->((2)) .= $C * sin($PI/2 * (1 - ($H % 2 - 1)->abs))**4;
+	}
+	
 	my $dexes = pdl( [1,2,0], [2,1,0], [0,1,2], [0,2,1], [2,0,1], [1,0,2] )->mv(1,0)->sever;
 	my $dex = $dexes->index1d($H->floor->(*1,*1) % 6)->((0))->sever; # 3x(threads)
 	my $out = $ZCX->index1d($dex)->sever + $m->(*1);
@@ -2053,9 +2090,9 @@ sub t_pc {
 	$in2 -= $min;
 	$in2 /= $max;
 
-	# Default to gamma=2.2 for perceptual brightness fluctuations.
+	# Default to sRGB coding for perceptual curves
 	if($opt->{lut}->{phot} && $opt->{perceptual}) {
-	    $in2 *= ($in2->abs) ** 1.2;
+	    _srgb_decode($in2->inplace);
 	}
 
 	# clip to (0,1)

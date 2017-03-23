@@ -2,7 +2,7 @@ use Test::More;
 
 
 BEGIN {
-    plan tests=>53;
+    plan tests=>59;
 
     use_ok('PDL::Transform::Color') || print "Bail out!\n";
 }
@@ -156,3 +156,18 @@ ok(all( ($hsltest* 1000)->rint ==
 eval { $hsltest2 = $hsltest->invert($t);};
 ok(!$@, "t_hsv ran ok in reverse");
 ok(all( ($brgbcmyw - $hsltest2 )->abs < 1e-4), "t_hsv gave good reverse answers");
+
+##########
+# test _srgb_encode and _srgb_decode
+$a = xvals(256)/255;
+eval { $b = PDL::Transform::Color::_srgb_encode($a); };
+ok(!$@, "_srgb_encode ran ok");
+ok(all($b+1e-10 > $a), "_srgb_encode output is always larger than input on [0,1]");
+ok(all($b->(1:-1)>$b->(0:-2)),"_srgb_encode output is monotonically increasing");
+$slope = $b->(1:-1) - $b->(0:-2);
+ok(all($slope->(1:-1) < $slope->(0:-2)),"slope is monotonically decreasing");
+eval { $aa = PDL::Transform::Color::_srgb_decode($b); };
+ok(!$@, "_srgb_decode ran ok");
+ok(all( ($aa > $a -1e-10) & ($aa < $a + 1e-10) ),"decoding undoes coding");
+
+
