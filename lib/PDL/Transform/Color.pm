@@ -243,7 +243,7 @@ $VERSION = eval $VERSION;
 BEGIN {
     package PDL::Transform::Color;
     use base 'Exporter';
-    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc/;
+    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc t_pcp/;
     @EXPORT = @EXPORT_OK;
     %EXPORT_TAGS = (Func=>[@EXPORT_OK]);
 };
@@ -1702,9 +1702,24 @@ sub t_hsl {
 	my $dexes = ($maxdex->(*1) + pdl(0,1,2)) % 3;
 
 	my $H = $out->((0));
-	$H .= (  ($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)) + 2 * $dexes->((0))  )  /  6;
-	$H += ($H<0);
 
+	## Old linear method
+	# $H .= ( 
+	#    (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)))
+	#	+ 2 * $dexes->((0))  ) ;
+	#
+	# $H += 6*($H<0);
+	# $H /= 6;
+
+	## New hotness: smooth transitions at corners
+	my $Hint = 2*$dexes->((0));
+	my $Hfrac = (($in->index1d($dexes->(1)) - $in->index1d($dexes->(2)))->((0))/($Delta+($Delta==0)));
+	my $Hfs = -1*($Hfrac<0) + ($Hfrac >= 0);
+	$Hfrac .= $Hfs * (    asin(  ($Hfrac->abs) ** 0.25  ) * 2/$PI    );
+	$H .= $Hint + $Hfrac;
+	$H /= 6;
+	$H += ($H<0);
+	
 	# Lightness and Saturation
 	my $L = $out->((2));
 	if($opt->{hsv}) {
@@ -1749,7 +1764,11 @@ sub t_hsl {
 	    $m = $L - $C/2;
 	}
 
-	$ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
+	## Old linear method
+	# $ZCX->((2)) .= $C * (1 - ($H % 2 - 1)->abs);
+
+	## New hotness: smooth transitions at corners.
+	$ZCX->((2)) .= $C * sin($PI/2 * (1 - ($H % 2 - 1)->abs))**4;
 
 	my $dexes = pdl( [1,2,0], [2,1,0], [0,1,2], [0,2,1], [2,0,1], [1,0,2] )->mv(1,0)->sever;
 	my $dex = $dexes->index1d($H->floor->(*1,*1) % 6)->((0))->sever; # 3x(threads)
@@ -1789,7 +1808,7 @@ sub t_hsv {
 ######################################################################
 ######################################################################
 
-=head2 t_pc 
+=head2 t_pc and t_pcp
 
 =for ref 
 
@@ -1800,8 +1819,20 @@ output is sRGB -- you have to set a flag for lsRGB output,
 for example if you want to produce output in some other system by
 composing t_pc with a color transformation.
 
-NOTE: C<t_pc> works BACKWARDS from most of the transformations in this
-package:  it converts FROM a data value TO sRGB or lsRGB.
+Many of the color tables are "photometric": the luminance of the
+output varies approximately linearly with the value of the input, when
+you use C<t_pc>.  This works well for colorizing photometric data, but
+fails for many kinds of generated data where perceptual shift roughly
+equal to the numeric shift is desired.  If you use C<t_pcp> takes care
+of that, by decoding the input values with a gamma of 2.2 before applying
+the pseudocolor.  You can achieve the same results by fiddling with the 
+C<gamma> option, but invoking C<t_pcp> uses fewer keystrokes and avoids
+you having to remember which transformations require gamma correction and
+which do not.
+
+NOTE: C<t_pc> and C<t_pcp> work BACKWARDS from most of the
+transformations in this package: they convert FROM a data value TO sRGB
+or lsRGB.
 
 There are options to adjust input gamma and the domain of the
 transformation (e.g. if your input data are on [0,1000]).
@@ -1821,6 +1852,8 @@ in luminance.
 
 =item lsRGB (default 0) - produce lsRGB output instead of sRGB.
 
+(this may be abbreviated "l" for "linear")
+
 =item domain - domain of the input; synonym for irange.
 
 =item irange (default [0,1]) - input range of the data
@@ -1839,71 +1872,230 @@ autoscaling, use C<ir=>[]>.
 ## pc_tab defines transformation subs for R, G, B from the grayscale.  The initial few are translated
 ## direct from the C<$palettesTab> in C<PDL::Graphics::Gnuplot>; others follow.
 ## Input is on the domain [0,1].  Output is clipped to [0,1] post facto.
+##
+## names should be lowercase.
 
 our $PI = 3.141592653589793238462643383279502;
 our $pc_tab = {
-    gray     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
-		  doc=>"greyscale" },
+    gray       => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
+		  doc=>"greyscale", phot=>1 },
 
-    grey     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
-		  doc=>"greyscale" },
+    grey       => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
+		  doc=>"greyscale", phot=>1 },
 
-    sepia    => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]},        sub{$_[0]**2}    ],
-		  doc=>"a simple sepiatone"    },
+    blepia     => { type=>'rgb', subs=> [ sub{$_[0]**2},    sub{$_[0]},        sub{sqrt($_[0])} ],
+		  doc=>"a simple sepiatone, in blue" , ogamma=>2, igamma=>0.75 },
 
-    grepia   => { type=>'rgb', subs=> [ sub{$_[0]},       sub{sqrt($_[0])},  sub{$_[0]**2}    ],
-		  doc=>"a simple sepiatone, in green" },
+    dop        => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)*2},   sub{2*$_[0]} ],
+		  doc=>"red-white-blue fade", ogamma=>2},
 
-    blepia   => { type=>'rgb', subs=> [ sub{$_[0]**2},    sub{$_[0]},        sub{sqrt($_[0])} ],
-		  doc=>"a simple sepiatone, in blue"  },
+    dop2       => { type=>'rgb', subs=> [ sub{1-$_[0]*2},   sub{abs($_[0]-0.5)**2},                  sub{-1+$_[0]*2} ],
+		  doc=>'red-black-blue fade (fully saturated)', ogamma=>2 },
 
-    vepia    => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]**2},     sub{sqrt($_[0])} ],
-		  doc=>"a simple sepiatone, in violet" },
+    dop3       => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{abs(sin(2*$PI*$_[0]))*0.33+0.05*sin($PI*$_[0])**2},  sub{-1+2*$_[0]}],
+		  doc=>'red-black-blue fade (gentle saturation near zero point)', ogamma=>2},
 
-    pm3d     => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]**3},     sub{sin($_[0]*2*$PI)} ],
-		  doc=>"duplicates the PM3d colortable in gnuplot (RG colorblind)" },
+    dop4       => { type=>'rgb', subs=> [ sub{(1.0-$_[0])**3},     sub{abs($_[0]-0.5)}, sub{$_[0]**3}    ],
+		  doc=>"orange-black-blue", ogamma=>2 },
 
-    grv      => { type=>'rgb', subs=> [ sub{$_[0]},     sub{abs($_[0]-0.5)}, sub{$_[0]**4}    ],
-		  doc=>"green-red-violet" },
+    grepia     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{sqrt($_[0])},  sub{$_[0]**2}    ],
+		  doc=>"a simple sepiatone, in green", ogamma=>2, igamma=>0.9, phot=>1 },
 
-    ocean    => { type=>'rgb', subs=> [ sub{3*$_[0]-2}, sub{abs(3*$_[0]-1)/2},  sub{$_[0]}    ],
-		  doc=>"green-blue-white" },
+    heat       => { type=>'rgb', subs=> [ sub{2*$_[0]},      sub{2*$_[0]-0.5},    sub{2*$_[0]-1} ],
+		  doc=>"heat-map (AFM): black-red-yellow-white", ogamma=>2, igamma=>0.667 },
 
-    rainbow  => { type=>'hsv', subs=> [ sub{$_[0]*0.82},     sub{1},               sub{1}          ],
+    pm3d       => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]**3},     sub{sin($_[0]*2*$PI)} ],
+		  doc=>"duplicates the PM3d colortable in gnuplot (RG colorblind)", ogamma=>2 },
+
+    grv        => { type=>'rgb', subs=> [ sub{sqrt($_[0]*0.5)},     sub{1-2*$_[0]},  sub{$_[0]**3.5}    ],
+		  doc=>"green-red-violet", ogamma=>2, igamma=>0.75 },
+
+    monochrome => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},         sub{$_[0]}       ],
+		  doc=>"synonym for greyscale"},
+
+    ocean      => { type=>'rgb', subs=> [ sub{(3*$_[0]-2)->clip(0) ** 2}, sub{$_[0]},  sub{$_[0]**0.33*0.5+$_[0]*0.5}    ],
+		  doc=>"green-blue-white", ogamma=>1, phot=>1, igamma=>0.8},
+
+    rainbow    => { type=>'hsv', subs=> [ sub{$_[0]*0.82},     sub{pdl(1)},               sub{pdl(1)}          ],
 		  doc=>"rainbow red-yellow-green-blue-violet"},
 
-    wheel    => { type=>'hsv', subs=> [ sub{$_[0]},         sub{1},                sub{1}         ],
+    rgb        => { type=>'rgb', subs=> [ sub{cos($_[0]*$PI/2)}, sub{sin($_[0]*$PI)}, sub{sin($_[0]*$PI/2)} ],
+		  doc=>"red-green-blue fade", phot=>1 },
+
+    sepia      => { type=>'rgb', subs=> [ sub{sqrt($_[0])}, sub{$_[0]},        sub{$_[0]**2}    ],
+		  doc=>"a simple sepiatone", phot=>1, ogamma=>1.8 },
+
+    vepia      => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]**2},     sub{sqrt($_[0])} ],
+		  doc=>"a simple sepiatone, in violet", phot=>1,ogamma=>1.6 },
+
+    wheel        => { type=>'hsv', subs=> [ sub{$_[0]},         sub{pdl(1)},                sub{pdl(1)}         ],
 		  doc=>"full color wheel red-yellow-green-blue-violet-red" },
-
-    heat1    => { type=>'rgb', subs=> [ sub{3*$_[0]},      sub{3*$_[0]-1},      sub{3*$_[0]-2} ],
-		  doc=>"heat-map: black-red-yellow-white" },
-
-    heat2    => { type=>'rgb', subs=> [ sub{2*$_[0]},      sub{2*$_[0]-0.5},    sub{2*$_[0]-1} ],
-		  doc=>"heat-map (AFM): black-red-yellow-white"},
-
-    rgb      => { type=>'rgb', subs=> [ sub{cos($_[0]*$PI/2)}, sub{sin($_[0]*$PI)}, sub{sin($_[0]*$PI/2)} ],
-		  doc=>"red-green-blue fade"},
-
-    dop      => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)},   sub{-1+2*$_[0]} ],
-		  doc=>"red-white-blue fade"},
-
-    dop2     => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{0},                  sub{-1+2*$_[0]} ],
-		  doc=>'red-black-blue fade (fully saturated)'},
-
-    dop3     => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{abs(sin(2*$PI*$_[0]))*0.33},  sub{-1+2*$_[0]}],
-		  doc=>'red-black-blue fade (gentle saturation near zero point)'}
-    
 };
 
+# Generate the abbrevs table: find minimal substrings that match only one result.
+our $pc_tab_abbrevs = {};
+{
+    my $pc_tab_foo = {};
+    for my $k(keys %$pc_tab) {
+	for my $i(0..length($k)){
+	    my $s = substr($k,0,$i);
+	    if($pc_tab_foo->{$s} and length($s)<length($k)) {
+		# collision with earlier string -- if that's a real abbreviation, zap it.
+		delete($pc_tab_abbrevs->{$s})
+		   unless( length($pc_tab_abbrevs->{$s}) == length($s) );
+	    } else {
+		# no collision -- figure it's a valid abbreviation.
+		$pc_tab_abbrevs->{$s} = $k;
+	    }
+	    $pc_tab_foo->{$s}++;
+	}
+    }
+}
+# Hand-code some abbreviations..
+$pc_tab_abbrevs->{g} = "grey";
+$pc_tab_abbrevs->{m} = "monochrome";
+
+
+### t_pcp - t_pc, but perceptual flag defaults to 1
+sub t_pcp {
+    my $name;
+    if(0+@_ % 2) {
+	$name = shift;
+    } else {
+	$name = undef;
+    }
+    my %opt = @_;
+    $opt{perceptual} = 1;
+
+    if(defined($name)) {
+	return t_pc($name,%opt);
+    } else {
+	return t_pc(%opt);
+    }
+}
+	
+    
 sub t_pc {
+    # No arguments
     unless(0+@_){
-	my $s = "t_pc: named pseudocolor mappings available:\n";
+	my $s = "Usage: 't_pc(\$colortab_name, %opt)'. Named pseudocolor mappings available:\n";
+	$s .= "  (tables marked 'phot' have near-linear luminance output.  Use t_pcp for equal\n  perceptual shift per input value)\n";
 	our $pc_tab;
 	for my $k(sort keys %{$pc_tab}) {
-	    $s .= "  $k\t$pc_tab->{$k}->{doc}\n";
+	    $s .= sprintf("  %8s - %s%s\n",$k,$pc_tab->{$k}->{doc},($pc_tab->{$k}->{phot}?" (phot)":""));
 	}
 	die $s."\n";
     }
+
+
+    # Parse the color table name.
+    # Odd number of params -- expect a table name and options.
+    # even number of params -- just options.
+    my $lut_name = ((0+@_) % 2) ? shift() : "monochrome";
+    $lut_name = $pc_tab_abbrevs->{lc($lut_name)};
+    unless($lut_name) {
+	t_pc(); # generate usage message
+    }
+
+    # Generate the object
+    my($me) = _new(@_, "pseudocolor sRGB encoding ($lut_name)",
+		   {
+		       clip=>1,
+		       byte=>1,
+		       gamma=>1.0,
+		       lsRGB=>0,
+		       domain=>undef,
+		       irange=>[0,1],
+		       perceptual=>0
+		   }
+	);
+    $me->{params}->{lut_name} = $lut_name;
+    $me->{params}->{lut} = $pc_tab->{$lut_name};
+    unless(defined($pc_tab->{$lut_name})){
+	die "t_pc: internal error (name $lut_name resolves but points to nothing)";
+    }
+    
+    # Handle domain-irange synonym
+    $me->{params}->{irange} = $me->{params}->{domain} if(defined($me->{params}->{domain}));
+
+    # Check that range is correct
+    $me->{params}->{irange} = [] unless(defined($me->{params}->{irange}));
+    unless( ref($me->{params}->{irange}) eq 'ARRAY'
+	){
+	die "t_pc: 'domain' or 'irange' parameter must be an array ref ";
+    }
+    if($me->{params}->{irange}->[0] == $me->{params}->{irange}->[1]  and 
+       (defined($me->{params}->{irange}->[0]) && defined($me->{params}->{irange}->[1]))) {
+	die "t_pc: 'domain' or 'irange' parameter must specify a nonempty range";
+    }
+
+    # Generate the forward transform
+    $me->{func} = sub {
+	my($in,$opt) = @_;
+
+	my $in2 = $in->new_or_inplace;
+
+	my ($min,$max) = @{$opt->{irange}};
+	
+	unless(defined($min) || defined($max)) {
+	    ($min,$max) = $in->minmax;
+	} elsif( !defined($min) ){
+	    $min = $in->min;
+	} elsif( !defined($max) ) {
+	    $max = $in->max;
+	}
+
+	if($min==$max || !isfinite($min) || !isfinite($max)) {
+	    die "t_pc transformation: range is zero or infinite ($min to $max)!  Giving up!";
+	}
+
+	# Translate to (0,1)
+	$in2 -= $min;
+	$in2 /= $max;
+
+	# Default to gamma=2.2 for perceptual brightness fluctuations.
+	if($opt->{lut}->{phot} && $opt->{perceptual}) {
+	    $in2 *= ($in2->abs) ** 1.2;
+	}
+
+	# clip to (0,1)
+	if($opt->{clip}) {
+	    $in2->inplace->clip(0,1);
+	}
+
+	if(defined($opt->{lut}->{igamma})) {
+	    $in2 *= ($in2->abs) ** ($opt->{lut}->{igamma} - 1);
+	}
+
+	# apply the transform
+	my $out = zeroes(3,$in2->dims);
+
+	$out->((0)) .= &{$opt->{lut}->{subs}->[0]}($in2)->clip(0,1);
+	$out->((1)) .= &{$opt->{lut}->{subs}->[1]}($in2)->clip(0,1);
+	$out->((2)) .= &{$opt->{lut}->{subs}->[2]}($in2)->clip(0,1);
+
+	if(defined($opt->{lut}->{ogamma})) {
+	    $out *= ($out->abs) ** ($opt->{lut}->{ogamma}-1);
+	}
+
+	return $out;
+    };
+
+    my $out = $me;
+
+    if($me->{params}->{lut}->{type} eq 'hsv') {
+	$out = (!t_hsv()) x $out;
+    }
+    
+    if(abs($me->{params}->{gamma}-1.0) > 1e-5) {
+	$out = $out x t_gamma($me->{params}->{gamma});
+    }
+    
+    unless($me->{params}->{lsRGB}) {
+	$out = t_srgb(clip=>$me->{params}->{clip}, byte=>$me->{params}->{byte}) x $out;
+    }
+    
+    return $out;
 }
     
 
