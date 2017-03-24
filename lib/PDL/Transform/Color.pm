@@ -1947,8 +1947,8 @@ our $pc_tab = {
     grv        => { type=>'rgb', subs=> [ sub{sqrt($_[0]*0.5)},     sub{1-2*$_[0]},  sub{$_[0]**3.5}    ],
 		    doc=>"green-red-violet", igamma=>0.75, phot=>1 },
 
-    monochrome => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},         sub{$_[0]}       ],
-		  doc=>"synonym for greyscale"},
+    mono       => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},         sub{$_[0]}       ],
+		  doc=>"synonym for grey"},
 
     ocean      => { type=>'rgb', subs=> [ sub{(3*$_[0]-2)->clip(0) ** 2}, sub{$_[0]},  sub{$_[0]**0.33*0.5+$_[0]*0.5}    ],
 		  doc=>"green-blue-white", phot=>1, igamma=>0.8},
@@ -1965,8 +1965,29 @@ our $pc_tab = {
     vepia      => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]**2},     sub{sqrt($_[0])} ],
 		  doc=>"a simple sepiatone, in violet", phot=>1, ogamma=>0.9 },
 
-    wheel        => { type=>'hsv', subs=> [ sub{$_[0]},         sub{pdl(1)},                sub{pdl(1)}         ],
-		  doc=>"full color wheel red-yellow-green-blue-violet-red" },
+    wheel      => { type=>'hsv', subs=> [ sub{$_[0]},         sub{pdl(1)},                sub{pdl(1)}         ],
+		      doc=>"full color wheel red-yellow-green-blue-violet-red" },
+
+    ryg     => { type=>'hsv', subs=> [ sub{ (0.5*($_[0]-0.333/2))%1 }, sub{0.8+0.2*$_[0]}, sub{$_[0]} ],
+		    doc=>"A quasi-sepiatone (R/Y) with green highlights",phot=>1, igamma=>0.7 },
+
+    voy     => { type=>'rgb', subs=> [ sub{pdl(1)*$_[0]}, sub{$_[0]**2*$_[0]}, sub{(1-$_[0])**4 * $_[0]}],
+                    doc=>"A colorblind-friendly map with lots of contrast", phot=>1, igamma=>0.7},
+
+    ### Seasons: these are sort of like the Matlab colortables of the same names...
+
+    spring     => { type=>'rgb', subs=> [ sub{pdl(1)}, sub{$_[0]**2}, sub{(1-$_[0])**4}],
+                    doc=>"Springy colors fading from magenta to yellow", phot=>1, igamma=>0.45},
+
+    summer     => { type=>'hsv', subs=> [ sub{ 0.333*(1- $_[0]/2) }, sub{0.7+0.1*$_[0]}, sub{0.01+0.99*$_[0]} ],
+		    doc=>"Summery colors fading from dark green to light yellow",phot=>1, igamma=>0.8 },
+
+    autumn     => { type=>'hsv', subs=> [ sub { $_[0] * 0.333/2 }, sub{pdl(1)}, sub{0.01+0.99*$_[0]} ],
+		    doc=>"Autumnal colors fading from dark red through orange to light yellow",phot=>1,igamma=>0.7},
+
+    winter     => { type=>'hsv', subs=> [ sub { 0.667-0.333*$_[0] }, sub{1.0-sin($PI/2*$_[0])**2*0.2}, sub{$_[0]}],
+		    doc=>"Wintery colors fading from dark blue through lightish green",phot=>1,igamma=>0.5},
+
 };
 
 # Generate the abbrevs table: find minimal substrings that match only one result.
@@ -1990,7 +2011,7 @@ our $pc_tab_abbrevs = {};
 }
 # Hand-code some abbreviations..
 $pc_tab_abbrevs->{g} = "grey";
-$pc_tab_abbrevs->{m} = "monochrome";
+for(qw/m monoc monoch monochr monochro monochrom monochrome/) {$pc_tab_abbrevs->{_} = "mono";}
 
 
 ### t_pcp - t_pc, but perceptual flag defaults to 1
@@ -2043,7 +2064,7 @@ sub t_pc {
 		       lsRGB=>0,
 		       domain=>undef,
 		       irange=>[0,1],
-		       perceptual=>0
+		       perceptual=>0,
 		   }
 	);
     $me->{params}->{lut_name} = $lut_name;
@@ -2101,7 +2122,7 @@ sub t_pc {
 	}
 
 	if(defined($opt->{lut}->{igamma})) {
-	    $in2 *= ($in2->abs) ** ($opt->{lut}->{igamma} - 1);
+	    $in2 *= ($in2->abs+1e-10) ** ($opt->{lut}->{igamma} - 1);
 	}
 
 	# apply the transform
