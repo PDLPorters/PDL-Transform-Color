@@ -27,4 +27,4 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=PDL-Transform-Color
   homepage: http://github.com/drzowie/PDL-Transform-Color
   repository: git://github.com/drzowie/PDL-Transform-Color.git
-version: 1.001
+version: 1.002

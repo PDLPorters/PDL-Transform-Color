@@ -518,26 +518,32 @@ C<byte> option is not set.
 # are slow and lame with the multiplicative masking -- would do better as a PP routine...
 sub _srgb_encode {
     my $a = shift;
-    my $b = $a->new_or_inplace;
+    my $b = ($a->is_inplace ? $a->new_or_inplace : $a->copy);
+    my $sgn = 2*(0.5-($a<0));
+    $b->inplace->abs;
     $b .= ( 
-	($a <= 0.00304) * (12.92 * $a )  +
-	($a >  0.00304) * ( 
-	    (1.055 * ( $a * (($a->abs+1e-30) ** (1.0/2.4 - 1)) ) ) - 0.055
+	($b <= 0.00304) * (12.92 * $b )  +
+	($b >  0.00304) * ( 
+	    (1.055 * ( $b * (($b+1e-30) ** (1.0/2.4 - 1)) ) ) - 0.055
 	)
 	);
+    $b *= $sgn;
     return $b;
 }
 
 sub _srgb_decode {
     my $a = shift;
-    my $b = $a->new_or_inplace;
+    my $b = ($a->is_inplace ? $a->new_or_inplace : $a->copy);
+    my $sgn = 2*(0.5-($a<0));
+    $b->inplace->abs;
     my $c = ($b+0.055)/1.055;
     $b .= ( 
-	($a <= 0.03928) * ( $a / 12.92 ) +
-	($a >  0.03928) * (
+	($b <= 0.03928) * ( $b / 12.92 ) +
+	($b >  0.03928) * (
 	    $c * ( $c->abs ** 1.4 )
 	)
 	);
+    $b *= $sgn;
     return $b;
 }
     
@@ -550,10 +556,8 @@ sub t_srgb {
 	);
     $me->{func} = sub {
 	my($in,$opt) = @_;
-	
 	# Convert from CIE RGB to sRGB primaries
 	my($rgb) = $in->new_or_inplace();
-
 	# Slow and lame -- would work far better as a pp routine...
 	_srgb_encode($rgb->inplace);
 	my $out;
@@ -1021,7 +1025,6 @@ sub t_shift_illuminant {
     $me->{params}->{to} = $new_illuminant;
 
     if(UNIVERSAL::isa($me->{params}->{method},"PDL")) {
-	print "PDL\n";
 	if($me->{params}->{method}->ndims==2 && 
 	   $me->{params}->{method}->dim(0)==3 &&
 	   $me->{params}->{method}->dim(1)==3) {
@@ -1906,11 +1909,27 @@ autoscaling, use C<ir=>[]>.
 =cut
 
 
-## pc_tab defines transformation subs for R, G, B from the grayscale.  The initial few are translated
-## direct from the C<$palettesTab> in C<PDL::Graphics::Gnuplot>; others follow.
-## Input is on the domain [0,1].  Output is clipped to [0,1] post facto.
+## pc_tab defines transformation subs for R, G, B from the grayscale.
+## The initial few are translated direct from the C<$palettesTab> in
+## C<PDL::Graphics::Gnuplot>; others follow.  Input is on the domain
+## [0,1].  Output is clipped to [0,1] post facto.
 ##
 ## names should be lowercase.
+##
+## Meaning of fields:
+
+## type     Color system being used ('rgb' or 'hsv' at present)
+## subs     List ref containing three subs that accept scaled input [0,1] and
+##            return each color coordinate value (e.g. r, g, b)
+## doc      Short one-line string describing the pseudocolor map
+## igamma   Scaled input is *decoded* from this gamma (raised to this power) if present
+## ogamma   Output is *encoded to this gamma (rooted by this power) if present
+## phot     Flag: if set, this pseudocolor map is approximately photometric and can be 
+##            scaled differently by the direct and perceptual color table methods
+## split    This is the "zero point" on [0-1] of the color map.  Default is 0.  Useful
+##            for gamma scaling etc; primarily used by doppler and other signed tables.
+##            (Note that it's the user's responsibility to make sure the irange places
+##            the zero here, since the subs accept pre-scaled input on [0,1]    
 
 our $PI = 3.141592653589793238462643383279502;
 our $pc_tab = {
@@ -1918,22 +1937,27 @@ our $pc_tab = {
 		  doc=>"greyscale", phot=>1 },
 
     grey       => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
-		  doc=>"greyscale", phot=>1 },
+		    doc=>"greyscale", phot=>1 },
 
     blepia     => { type=>'rgb', subs=> [ sub{$_[0]**2},    sub{$_[0]},        sub{sqrt($_[0])} ],
 		  doc=>"a simple sepiatone, in blue" , phot=>1, igamma=>0.75 },
 
     dop        => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)*2},   sub{2*$_[0]} ],
-		  doc=>"red-white-blue fade", ogamma=>2},
+		    doc=>"red-white-blue fade", ogamma=>1.5, igamma=>0.6, phot=>1, split=>.5},
 
-    dop2       => { type=>'rgb', subs=> [ sub{1-$_[0]*2},   sub{abs($_[0]-0.5)**2},                  sub{-1+$_[0]*2} ],
-		  doc=>'red-black-blue fade (fully saturated)', ogamma=>2 },
+    dop1       => { type=>'rgb', subs=> [ sub{2-2*$_[0]},   sub{1-abs($_[0]-0.5)*2},   sub{2*$_[0]} ],
+		    doc=>"dop synonym", ogamma=>1.5, igamma=>0.6, phot=>1, split=>.5},
 
-    dop3       => { type=>'rgb', subs=> [ sub{1-2*$_[0]},   sub{abs(sin(2*$PI*$_[0]))*0.33+0.05*sin($PI*$_[0])**2},  sub{-1+2*$_[0]}],
-		  doc=>'red-black-blue fade (gentle saturation near zero point)', ogamma=>2},
+    dop2       => { type=>'rgb', subs=> [ sub{(1-2*$_[0])},  sub{(($_[0]-0.5)->abs->clip(0,0.5))**2},    sub{(-1+2*$_[0])} ],
+		  doc=>'red-black-blue fade (mostly saturated)', ogamma=>1.5, igamma=>0.5, phot=>1, split=>0.5 },
 
-    dop4       => { type=>'rgb', subs=> [ sub{(1.0-$_[0])**3},     sub{abs($_[0]-0.5)}, sub{$_[0]**3}    ],
-		  doc=>"orange-black-blue", ogamma=>2 },
+    dop3       => { type=>'rgb', subs=> [ sub{1-$_[0]*2},   sub{(0.1+abs($_[0]-0.5))**2},                  sub{-1+$_[0]*2} ],
+		  doc=>'orange-black-lightblue fade (lightly saturated)', ogamma=>1.5, igamma=>0.5, phot=>1, split=>0.5 },
+
+    vbg        => { type=>'rgb', subs=> [ sub{1 - (2*$_[0])},  sub{abs($_[0]-0.5)*1.5},    sub{1 - 2*$_[0]} ],
+		  doc=>'violet-black-green signed fade', ogamma=>1.5, igamma=>0.5, phot=>1, split=>0.5 },
+
+
 
     grepia     => { type=>'rgb', subs=> [ sub{$_[0]},       sub{sqrt($_[0])},  sub{$_[0]**2}    ],
 		  doc=>"a simple sepiatone, in green", igamma=>0.9, phot=>1 },
@@ -2111,18 +2135,49 @@ sub t_pc {
 	$in2 -= $min;
 	$in2 /= $max;
 
+	my $split = 0;
+	# Deal with split color tables
+	if($opt->{lut}->{split}) {
+	    $split = $opt->{lut}->{split};
+	    $in2 -= $split;
+	    if($split==0.5) {
+		$in2 *= 2;
+	    } else {
+		$in2->where($in2<0) /= $split;
+		$in2->where($in2>0) /= (1.0-$split);
+	    }
+	}
+
 	# Default to sRGB coding for perceptual curves
 	if($opt->{lut}->{phot} && $opt->{perceptual}) {
 	    _srgb_decode($in2->inplace);
 	}
 
-	# clip to (0,1)
 	if($opt->{clip}) {
-	    $in2->inplace->clip(0,1);
+	    if($split) {
+		$in2->inplace->clip( -1,1 );
+	    } else {
+		$in2->inplace->clip(0,1);
+	    }
 	}
 
 	if(defined($opt->{lut}->{igamma})) {
 	    $in2 *= ($in2->abs+1e-10) ** ($opt->{lut}->{igamma} - 1);
+	}
+
+	if($split) {
+	    if($split==0.5) {
+		$in2 /=2;
+	    } else {
+		$in2->where($in2<0) *= $split;
+		$in2->where($in2>0) *= (1.0-$split);
+		$in2 += $split;
+	    }
+	    $in2 += $split;
+
+	    if($opt->{clip}) {
+		$in2->clip(0,1);
+	    }
 	}
 
 	# apply the transform
@@ -2135,7 +2190,6 @@ sub t_pc {
 	if(defined($opt->{lut}->{ogamma})) {
 	    $out *= ($out->abs) ** ($opt->{lut}->{ogamma}-1);
 	}
-
 	return $out;
     };
 
