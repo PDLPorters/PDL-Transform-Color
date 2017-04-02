@@ -6,9 +6,3 @@
 - Even using threaded/vectorized expressions, the expressions are
   better optimized for programmer understanding than for speed.  This probably
   induces another 2x speed hit over an optimized PP solution.
-
-- i/o is a bit awkward.
-
-- for proper exploitation, this needs some companion work on
-  PDL::Graphics::Gnuplot and similar -- that module's image
-  display API could be improved for better convenience.

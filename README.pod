@@ -519,6 +519,19 @@ autoscaled to the input data, e.g. C<ir=>[0,undef]> causes the color map
 to be scaled from 0 to the maximum value of the input.  For full 
 autoscaling, use C<ir=>[]>.
 
+=item combination (default 0) - recombine r,g,b post facto
+
+This option allows you to perturb maps you like by mixing up r, g, and
+b after all the other calculations are done.  You feed in a number
+from 0 to 5.  If it's nonzero, you get a different combination of the
+three primaries.  You can mock this up more compactly by appending
+C<-Cn> to the (possibly abbreviated) name of the table.  (Replace
+the 'n' with a number). 
+
+For example, if you speciy the color table C<sepia> or C<sepia-c0> you'll
+get the sepiatone color table.  If you specify C<sepia-c5> you'll get 
+almost the exact same color table as C<grepia>.
+
 =back
 
 You can abbreviate color table names with unique abbreviations.  
