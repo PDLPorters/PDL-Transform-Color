@@ -765,6 +765,19 @@ autoscaled to the input data, e.g. C<ir=>[0,undef]> causes the color map
 to be scaled from 0 to the maximum value of the input.  For full 
 autoscaling, use C<ir=>[]>.
 
+=item combination (default 0) - recombine r,g,b post facto
+
+This option allows you to perturb maps you like by mixing up r, g, and
+b after all the other calculations are done.  You feed in a number
+from 0 to 5.  If it's nonzero, you get a different combination of the
+three primaries.  You can mock this up more compactly by appending
+C<-Cn> to the (possibly abbreviated) name of the table.  (Replace
+the 'n' with a number). 
+
+For example, if you speciy the color table C<sepia> or C<sepia-c0> you'll
+get the sepiatone color table.  If you specify C<sepia-c5> you'll get 
+almost the exact same color table as C<grepia>.
+
 =back
 
 You can abbreviate color table names with unique abbreviations.  
@@ -997,13 +1010,16 @@ sub t_pcp {
 	return t_pc(%opt);
     }
 }
-	
-    
+
+our @_t_pc_combinatorics =(
+    [0,1,2],[1,2,0],[2,0,1],[0,2,1],[2,1,0],[1,0,2]
+    );
+
 sub t_pc {
     # No arguments
     unless(0+@_){
 	my $s = "Usage: 't_pc(\$colortab_name, %opt)'. Named pseudocolor mappings available:\n";
-	$s .= "  (tables marked 'phot' have near-linear luminance output.  Use t_pcp for equal\n  perceptual shift per input value)\n";
+	$s .= "  (tables marked 'phot' are luminance based.  Use t_pc for photometric data, or\n  t_pcp for near-constant perceptual shift per input value.\n  Add '-c<n>' suffix (n in [0..5]) for RGB combinatoric variations.)\n";
 	our $pc_tab;
 	for my $k(sort keys %{$pc_tab}) {
 	    $s .= sprintf("  %8s - %s%s\n",$k,$pc_tab->{$k}->{doc},($pc_tab->{$k}->{phot}?" (phot)":""));
@@ -1016,11 +1032,23 @@ sub t_pc {
     # Odd number of params -- expect a table name and options.
     # even number of params -- just options.
     my $lut_name = ((0+@_) % 2) ? shift() : "monochrome";
+
+
+    ###
+    # Table names can have combinatoric modifiers.  Parse those out.
+    my $mod_combo = undef;
+    if( $lut_name =~ s/\-C([0-5])$//i ) {
+	# got a combinatoric modifier
+	$mod_combo = $1;
+    }
+
+    ## Look up the table by name
     $lut_name = $pc_tab_abbrevs->{lc($lut_name)};
     unless($lut_name) {
 	t_pc(); # generate usage message
     }
 
+    
     # Generate the object
     my($me) = _new(@_, "pseudocolor sRGB encoding ($lut_name)",
 		   {
@@ -1031,8 +1059,10 @@ sub t_pc {
 		       domain=>undef,
 		       irange=>[0,1],
 		       perceptual=>0,
+		       combination=>0
 		   }
 	);
+
     $me->{params}->{lut_name} = $lut_name;
     $me->{params}->{lut} = $pc_tab->{$lut_name};
     unless(defined($pc_tab->{$lut_name})){
@@ -1051,6 +1081,45 @@ sub t_pc {
     if($me->{params}->{irange}->[0] == $me->{params}->{irange}->[1]  and 
        (defined($me->{params}->{irange}->[0]) && defined($me->{params}->{irange}->[1]))) {
 	die "t_pc: 'domain' or 'irange' parameter must specify a nonempty range";
+    }
+
+
+    # Check the RGB recombination parameter
+    if($mod_combo) {
+	die "t_pc / t_pcp: can't specify RGB combinatorics in both parameters and table\n  suffix at the same time" if(	$me->{params}->{combination} );
+	$me->{params}->{combination} = $mod_combo;
+    }
+
+    
+    if($me->{params}->{combination} < 0 || $me->{params}->{combination} > 5) {
+	die "t_pc/t_pcp: 'combination' parameter must be between 0 and 5 inclusive";
+    }
+
+    # Copy the conversion subs from the map table entry to the object, with combinatorics as
+    # needed.
+    
+    if($me->{params}->{lut}->{type} eq 'hsv') {
+
+	# hsv - copy subs in from table, and implement combinatorics with a hue transform
+	
+	$me->{params}->{subs} = [  @{$me->{params}->{lut}->{subs}}  ]; # copy the subs for the map
+	if($me->{params}->{combination}) {
+	    my $s0 = $me->{params}->{subs}->[0];
+	    $me->{params}->{subs}->[0] = 
+		sub { 
+		    my $a = &$s0(@_);
+		    $a += 0.33 * $me->{params}->{combination};
+		    $a *= -1 if($me->{params}->{combination} > 2);
+		    $a .= $a % 1;
+		    return $a;
+	    };
+	} # end of 'combination' handler for hsv
+    } else {
+
+	print "combinatorics is ".join(",",@{ $_t_pc_combinatorics[$me->{params}->{combination}]})."\n";
+	# rgb - do any combinatorics as needed
+	$me->{params}->{subs} = [ @{$me->{params}->{lut}->{subs}}[ (@{  $_t_pc_combinatorics[$me->{params}->{combination}] })  ]  ];
+	
     }
 
     # Generate the forward transform
@@ -1125,9 +1194,11 @@ sub t_pc {
 	# apply the transform
 	my $out = zeroes(3,$in2->dims);
 
-	$out->((0)) .= &{$opt->{lut}->{subs}->[0]}($in2)->clip(0,1);
-	$out->((1)) .= &{$opt->{lut}->{subs}->[1]}($in2)->clip(0,1);
-	$out->((2)) .= &{$opt->{lut}->{subs}->[2]}($in2)->clip(0,1);
+	## These are the actual transforms.  They're figured by the constructor,
+	## which does any combinatorics in setting up the subs.
+	$out->((0)) .= &{$opt->{subs}->[0]}($in2)->clip(0,1);
+	$out->((1)) .= &{$opt->{subs}->[1]}($in2)->clip(0,1);
+	$out->((2)) .= &{$opt->{subs}->[2]}($in2)->clip(0,1);
 
 	if(defined($opt->{lut}->{ogamma})) {
 	    $out *= ($out->abs) ** ($opt->{lut}->{ogamma}-1);
@@ -1148,7 +1219,7 @@ sub t_pc {
     unless($me->{params}->{lsRGB}) {
 	$out = t_srgb(clip=>$me->{params}->{clip}, byte=>$me->{params}->{byte}) x $out;
     }
-    
+
     return $out;
 }
     
