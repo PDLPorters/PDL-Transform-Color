@@ -27,7 +27,7 @@
       },
       "configure" : {
          "requires" : {
-            "ExtUtils::Makemaker" : "6.48"
+            "ExtUtils::MakeMaker" : "6.48"
          }
       },
       "runtime" : {
@@ -50,5 +50,5 @@
          "url" : "git://github.com/drzowie/PDL-Transform-Color.git"
       }
    },
-   "version" : "1.002"
+   "version" : "1.003"
 }
