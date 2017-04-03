@@ -1116,7 +1116,6 @@ sub t_pc {
 	} # end of 'combination' handler for hsv
     } else {
 
-	print "combinatorics is ".join(",",@{ $_t_pc_combinatorics[$me->{params}->{combination}]})."\n";
 	# rgb - do any combinatorics as needed
 	$me->{params}->{subs} = [ @{$me->{params}->{lut}->{subs}}[ (@{  $_t_pc_combinatorics[$me->{params}->{combination}] })  ]  ];
 	
