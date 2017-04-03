@@ -1,3 +1,6 @@
+v1.003
+	- fix typo in Makefile.PL
+
 v1.002
 	- addition of pseudocolor mappings and the t_pc and t_pcp transforms
 	- Improved documentation

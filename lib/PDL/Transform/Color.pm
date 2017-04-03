@@ -337,7 +337,7 @@ package PDL::Transform::Color;
 use PDL::Core ':Internal';  # load "topdl" (internal routine)
 
 @ISA = ( 'Exporter', 'PDL::Transform' );
-our $VERSION = '1.002';
+our $VERSION = '1.003';
 $VERSION = eval $VERSION;
 
 BEGIN {
