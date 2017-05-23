@@ -952,11 +952,7 @@ our $pc_tab = {
 
     extra   => { type=>'hsv', subs=>[ sub{ (0.85*($_[0]**0.75-0.333/2))%1}, sub{0.8+0.2*$_[0]-0.8*$_[0]**6}, 
 				      sub{(0.33*$_[0]**0.5+$_[0]*2.25-1.2*$_[0]**2+$_[0]**3-0.4*$_[0]**4)->clip(0,1)} ],
-	          doc=>"Extra-broad photometric map; also try -c1 and -c5.",phot=>1,igamma=>0.667 },
-
-    extr0   => { type=>'hsv', subs=>[ sub{ (0.85*($_[0]-0.333/2))%1}, sub{0.8+0.2*$_[0]-0.33*$_[0]**5}, 
-				      sub{(0.5*$_[0]**0.5+$_[0]*1.5-$_[0]**2+$_[0]**3-0.25*$_[0]**4)->clip(0,1)} ],
-	          doc=>"Extra-broad photometric map; also try -c1 and -c5.",phot=>1,igamma=>0.75 },
+	          doc=>"Extra-broad photometric map; also try -c1, -c4, and -c5.",phot=>1,igamma=>0.667 },
 
     voy     => { type=>'rgb', subs=> [ sub{pdl(1)*$_[0]}, sub{$_[0]**2*$_[0]}, sub{(1-$_[0])**4 * $_[0]}],
                     doc=>"A colorblind-friendly map with lots of contrast", phot=>1, igamma=>0.7},
