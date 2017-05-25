@@ -951,8 +951,8 @@ our $pc_tab = {
 		 doc=>"A quasi-sepiatone (R/Y) with green highlights",phot=>1, igamma=>0.7 },
 
     extra   => { type=>'hsv', subs=>[ sub{ (0.85*($_[0]**0.75-0.333/2))%1}, sub{0.8+0.2*$_[0]-0.8*$_[0]**6}, 
-				      sub{(0.33*$_[0]**0.5+$_[0]*2.25-1.2*$_[0]**2+$_[0]**3-0.4*$_[0]**4)->clip(0,1)} ],
-	          doc=>"Extra-broad photometric map; also try -c1, -c4, and -c5.",phot=>1,igamma=>0.667 },
+				      sub { 1 - exp(-$_[0]/0.15) - 0.08 }],
+	          doc=>"Extra-broad photometric; also try -c1 etc.",phot=>1,igamma=>0.55 },
 
     voy     => { type=>'rgb', subs=> [ sub{pdl(1)*$_[0]}, sub{$_[0]**2*$_[0]}, sub{(1-$_[0])**4 * $_[0]}],
                     doc=>"A colorblind-friendly map with lots of contrast", phot=>1, igamma=>0.7},
