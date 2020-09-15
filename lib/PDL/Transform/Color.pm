@@ -473,6 +473,7 @@ sub t_gamma {
 	if($opt->{gamma} != 1) {
 	    $out *= ($in->abs + ($in==0)) ** (1.0/$opt->{gamma} - 1);
 	}
+	$out;
     };
 	
     $me;

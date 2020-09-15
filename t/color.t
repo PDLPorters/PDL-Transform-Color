@@ -27,7 +27,8 @@ is $@, '', "t_gamma transform applied OK";
 ok(all(($otriplet * 10000)->rint == ($itriplet**2 * 10000)->rint), "gamma=2 squares the output");
 eval {$otriplet = $itriplet->invert($t);};
 is $@, '', "t_gamma transform inverse applied OK";
-ok(all(($otriplet * 10000)->rint == ($itriplet**0.5 * 10000)->rint), "gamma=2 inverse square-roots the output");
+ok all((($otriplet * 10000)->rint) == (($itriplet**0.5 * 10000)->rint)), "gamma=2 inverse square-roots the output"
+  or diag explain [ unpdl($otriplet), unpdl($itriplet) ];
 
 $itriplet *= pdl(-1,1,1);
 eval {$otriplet = $itriplet->apply($t);};
