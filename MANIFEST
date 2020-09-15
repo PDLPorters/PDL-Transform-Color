@@ -1,7 +1,9 @@
 CHANGES
+lib/PDL/Transform/Color.pm
 LICENSE
-README.pod
 Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+README.pod
 t/color.t
 TODO
-lib/PDL/Transform/Color.pm
