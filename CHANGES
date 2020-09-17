@@ -1,3 +1,5 @@
+- eliminate // to keep 5.006 compat
+
 1.004 2020-09-15
 - re-release after deletion
 - fix so works under Devel::Cover

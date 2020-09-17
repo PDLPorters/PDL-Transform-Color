@@ -2090,7 +2090,8 @@ sub t_shift_rgb {
 	$to_gamma   = $me->{params}->{to_rgb}->{gamma};
     } else {
 	$from_gamma = $me->{params}->{gamma};
-	$to_gamma   = $me->{params}->{ogamma} // $me->{params}->{gamma};
+	$to_gamma   = $me->{params}->{ogamma};
+	$to_gamma   = $me->{params}->{gamma} if !defined $to_gamma;
     }
 
     my $out = 
