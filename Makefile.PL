@@ -46,9 +46,9 @@ WriteMakefile(
     },
     META_ADD => {
         resources => {
-            homepage          => 'http://github.com/drzowie/PDL-Transform-Color',
-            repository        => 'git://github.com/drzowie/PDL-Transform-Color.git',
-            bugtracker        => 'http://rt.cpan.org/Public/Dist/Display.html?Name=PDL-Transform-Color'
+            homepage          => 'http://github.com/PDLPorters/PDL-Transform-Color',
+            repository        => 'git://github.com/PDLPorters/PDL-Transform-Color.git',
+            bugtracker        => 'http://github.com/PDLPorters/PDL-Transform-Color/issues'
         }
     },  
 
