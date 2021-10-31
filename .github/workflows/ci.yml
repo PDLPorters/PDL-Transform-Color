@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: PDLPorters/devops/github-actions/irc-notifications@master
         with:
-          target-notifications: false # TODO
+          target-notifications: true
   ci:
     runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
@@ -66,5 +66,5 @@ jobs:
     steps:
       - uses: PDLPorters/devops/github-actions/irc-notifications@master
         with:
-          target-build-status: false # TODO
+          target-build-status: true
           needs: ${{ toJSON(needs) }}
