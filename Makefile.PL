@@ -35,11 +35,13 @@ WriteMakefile(
     CONFIGURE_REQUIRES => {
         'ExtUtils::MakeMaker' => 6.48,
     },
+    TEST_REQUIRES => {
+        'Test::More' => '0.88',
+    },
     PREREQ_PM => { 
         'PDL'                 => 0,
         'PDL::MatrixOps'      => 0,
 	'PDL::Transform'      => 0,
-        'Safe::Isa'           => 0
     },
     META_ADD => {
         resources => {

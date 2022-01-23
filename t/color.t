@@ -1,17 +1,10 @@
+use strict;
+use warnings;
 use Test::More;
 
-
-BEGIN {
-    plan tests=>63;
-
-    use_ok('PDL::Transform::Color') || print "Bail out!\n";
-}
-
-eval "use PDL::Transform::Color;";
-
-ok( $PDL::Transform::Color::VERSION, "looks like there's a version in the module" );
 use PDL;
 use PDL::Transform;
+use PDL::Transform::Color;
 
 ##########
 ## test t_gamma
@@ -180,3 +173,5 @@ is $@, '', "t_pc('sepia') ran OK";
 eval {$b=$a->apply($t);};
 is $@, '', "t_pc applied OK";
 ok($b->ndims==2 && $b->dim(0)==3, "t_pc created an RGB output");
+
+done_testing;
