@@ -2152,7 +2152,7 @@ sub xyy_from_D {
 	$u_opt);
 
     die "cie_xy_from_D: D must be between 40 and 250" if(any($D< 40) || any($D > 250));
-    my $T = $D*100;
+    my $T = $D*100 * 1.4388/1.438; # adjust for 6504K not 6500K
 
     my $Xd;
     $Xd = ($D<=70) * ( 0.244063 + 0.09911e3/$T + 2.9678e6/$T/$T - 4.6070e9/$T/$T/$T ) +

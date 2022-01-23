@@ -178,6 +178,6 @@ eval {$t = t_xyz2lab();};
 is $@, '', "t_xyz2lab ran OK";
 eval {$b=pdl(1,1,1)->apply($t);};
 is $@, '', "t_xyz2lab applied OK";
-ok all(approx $b, pdl(100, 8.5841461, 5.5183538)), 't_xyz2lab right values' or diag "got=$b";
+ok all(approx $b, pdl(100, 8.5859237, 5.5509345)), 't_xyz2lab right values' or diag "got=$b";
 
 done_testing;
