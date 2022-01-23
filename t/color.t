@@ -167,11 +167,17 @@ ok(all( ($aa > $a -1e-10) & ($aa < $a + 1e-10) ),"decoding undoes coding");
 # (minimal testing)
 $a = xvals(101)/100;
 eval {$t = t_pc();};
-ok(($@ && $@=~m/^Usage\:/), "t_pc with no arguments died and threw out an info message");
+like $@, qr/^Usage\:/, "t_pc with no arguments died and threw out an info message";
 eval {$t = t_pc('sepia');};
 is $@, '', "t_pc('sepia') ran OK";
 eval {$b=$a->apply($t);};
 is $@, '', "t_pc applied OK";
 ok($b->ndims==2 && $b->dim(0)==3, "t_pc created an RGB output");
+
+eval {$t = t_xyz2lab();};
+is $@, '', "t_xyz2lab ran OK";
+eval {$b=pdl(1,1,1)->apply($t);};
+is $@, '', "t_xyz2lab applied OK";
+ok all(approx $b, pdl(100, 8.5841461, 5.5183538)), 't_xyz2lab right values' or diag "got=$b";
 
 done_testing;

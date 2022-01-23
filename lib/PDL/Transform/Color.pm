@@ -1539,9 +1539,7 @@ sub t_xyz2lab {
     my $wp_xyy = xyy_from_illuminant($me->{params}->{white});
     $me->{params}->{wp_xyz} = $wp_xyy->copy;
     $me->{params}->{wp_xyz}->slice('2') .= 1 - $wp_xyy->slice('0') - $wp_xyy->slice('1');
-    $me->{params}->{wp_xyz} *= $wp_xyy->slice('2');
-    
-
+    $me->{params}->{wp_xyz} *= $wp_xyy->slice('2') / $wp_xyy->slice('1');
     # input is XYZ by the time it gets here
     $me->{func} = sub {
 	my($in,$opt) = @_;
