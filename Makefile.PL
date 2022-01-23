@@ -30,10 +30,7 @@ WriteMakefile(
     AUTHOR                    => 'Craig DeForest <craig@deforest.org>',
     VERSION_FROM              => 'lib/PDL/Transform/Color.pm',
     ABSTRACT_FROM             => 'lib/PDL/Transform/Color.pm',
-    ( $ExtUtils::MakeMaker::VERSION >= 6.3002
-        ? ('LICENSE'          => 'perl')
-        : ()
-    ),
+    LICENSE                   => 'perl',
     MIN_PERL_VERSION          => 5.006,
     CONFIGURE_REQUIRES => {
         'ExtUtils::MakeMaker' => 6.48,
