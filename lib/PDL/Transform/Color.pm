@@ -345,7 +345,7 @@ use PDL::Options;
 use Carp;
 
 our @ISA = ( 'Exporter', 'PDL::Transform' );
-our $VERSION = '1.005';
+our $VERSION = '1.006';
 $VERSION = eval $VERSION;
 
 our @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc t_pcp/;
