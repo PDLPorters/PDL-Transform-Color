@@ -334,32 +334,27 @@ use PDL::Transform;
 
 package PDL::Transform::Color;
 
-use PDL::Core ':Internal';  # load "topdl" (internal routine)
+use strict;
+use warnings;
+use base 'Exporter';
+use PDL::LiteF;
+use PDL::Transform;
+use PDL::MatrixOps;
+use PDL::Math;
+use PDL::Options;
+use Carp;
 
-@ISA = ( 'Exporter', 'PDL::Transform' );
+our @ISA = ( 'Exporter', 'PDL::Transform' );
 our $VERSION = '1.005';
 $VERSION = eval $VERSION;
 
-BEGIN {
-    package PDL::Transform::Color;
-    use base 'Exporter';
-    @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc t_pcp/;
-    @EXPORT = @EXPORT_OK;
-    %EXPORT_TAGS = (Func=>[@EXPORT_OK]);
-};
+our @EXPORT_OK = qw/ t_gamma t_brgb t_srgb t_shift_illuminant t_shift_rgb t_cmyk t_rgi t_cieXYZ t_xyz t_xyY t_xyy t_lab t_xyz2lab t_hsl t_hsv t_pc t_pcp/;
+our @EXPORT = @EXPORT_OK;
+our %EXPORT_TAGS = (Func=>\@EXPORT_OK);
 
-use strict;
-use PDL;
-use PDL::Transform;
-use PDL::MatrixOps;
-use PDL::Options;
-
-use Carp;
-
-our $PI = $PDL::Transform::PI;
+our $PI = 3.141592653589793238462643383279502;
 our $DEG2RAD = $PDL::Transform::DEG2RAD;
 our $RAD2DEG = $PDL::Transform::RAD2DEG;
-
 
 # Some matrix values of use in RGB conversions...
 
@@ -884,9 +879,8 @@ The full "color wheel", including the controversial magenta-to-red segment
 ## split    This is the "zero point" on [0-1] of the color map.  Default is 0.  Useful
 ##            for gamma scaling etc; primarily used by doppler and other signed tables.
 ##            (Note that it's the user's responsibility to make sure the irange places
-##            the zero here, since the subs accept pre-scaled input on [0,1]    
+##            the zero here, since the subs accept pre-scaled input on [0,1]
 
-our $PI = 3.141592653589793238462643383279502;
 our $pc_tab = {
     gray       => { type=>'rgb', subs=> [ sub{$_[0]},       sub{$_[0]},        sub{$_[0]}       ],
 		  doc=>"greyscale", phot=>1 },
@@ -983,7 +977,7 @@ our $pc_tab_abbrevs = {};
 	    if($pc_tab_foo->{$s} and length($s)<length($k)) {
 		# collision with earlier string -- if that's a real abbreviation, zap it.
 		delete($pc_tab_abbrevs->{$s})
-		   unless( length($pc_tab_abbrevs->{$s}) == length($s) );
+		   unless( length($pc_tab_abbrevs->{$s}||'') == length($s) );
 	    } else {
 		# no collision -- figure it's a valid abbreviation.
 		$pc_tab_abbrevs->{$s} = $k;
@@ -1812,7 +1806,7 @@ sub t_hsl {
 	    $out->slice('(1)') .= $Delta / ($L + ($L==0));
 	} else {
 	    $L .= ($Cmax + $Cmin)/2;
-	    $out->slice('(1)') .= $Delta / (1 - (2*$L-1)->abs + ($L==0 | $L==1));
+	    $out->slice('(1)') .= $Delta / (1 - (2*$L-1)->abs + (($L==0) | ($L==1)));
 	}
 	
 
@@ -2474,8 +2468,5 @@ sub get_rgb {
     }
     return $new_rgb;
 }
-
-
-
 
 1;
