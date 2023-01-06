@@ -178,6 +178,14 @@ eval {$t = t_xyz2lab();};
 is $@, '', "t_xyz2lab ran OK";
 eval {$b=pdl(1,1,1)->apply($t);};
 is $@, '', "t_xyz2lab applied OK";
-ok all(approx $b, pdl(100, 8.5859237, 5.5509345)), 't_xyz2lab right values' or diag "got=$b";
+ok all(approx $b, pdl(100, 8.5945916, 5.5564131)), 't_xyz2lab right values' or diag "got=$b";
+
+
+for my $rgb (pdl(255, 0, 0), pdl(0, 255, 0), pdl(0, 0, 255)) {
+    my $t = t_lab() x !t_srgb();
+    my $lab = $rgb->apply($t);
+    my $rgb2 = $lab->invert($t);
+    ok(all(approx $rgb2, $rgb), "t_lab loop $rgb") or diag "got=$b";
+}
 
 done_testing;
