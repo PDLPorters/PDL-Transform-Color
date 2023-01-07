@@ -1841,7 +1841,7 @@ and some options.
 
 Because this is shifting RGB to RGB in the same representation, gamma
 transformations get re-encoded afterward: if you use, for example,
-C<gamma=>2>, then the RGB values are squared, then transformed, then 
+C<< gamma=>2 >>, then the RGB values are squared, then transformed, then
 square-rooted.
 
 Options are:
