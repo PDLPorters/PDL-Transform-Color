@@ -353,14 +353,6 @@ our $PI = 3.141592653589793238462643383279502;
 
 # Some matrix values of use in RGB conversions...
 
-# Matrix to convert CIE RGB to CIE XYZ
-our($crgb2cxyz_mat) =
-    pdl(  [0.49000, 0.31000, 0.20000], 
-	  [0.17697, 0.81240, 0.01063],
-	  [0.00000, 0.01000, 0.99000]
-      ) / 0.17697;
-our($crgb2ciexyz_inv) = $crgb2cxyz_mat->inv;
-
 # Matrix to convert CIE XYZ to sRGB
 our($srgb2cxyz_inv) =
     pdl( [ 3.2410, -1.5374, -0.4986],

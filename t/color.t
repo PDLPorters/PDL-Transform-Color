@@ -102,7 +102,7 @@ ok( all( ($xpypzptriplet->slice('0:1')*1000)->rint ==
 	   )
 	   * 1000)->rint
     ),
-    "XYZ translation works for R, G, and B vectors");
+    "XYZ translation works for R, G, and B vectors") or diag "got: ", ($xpypzptriplet->slice('0:1')*1000)->rint;
 eval { $i2triplet = $otriplet->invert(t_xyz()); };
 is $@, '', "t_xyz inverse runs OK";
 ok( all( ($i2triplet*10000)->rint == ($itriplet*10000)->rint ), "t_xyz inverse works OK");
