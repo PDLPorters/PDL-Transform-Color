@@ -1493,7 +1493,7 @@ sub f_lab {
     my $delta = 6/29;
     my $delta3 = $delta * $delta * $delta;
     return ( 
-	($in >  $delta3) * ( $in * (($in->abs+($in==0)) ** (0.333-1)) ) +
+	($in >  $delta3) * ( $in * (($in->abs+($in==0)) ** (1/3-1)) ) +
 	($in <= $delta3) * ( $in / (3 * $delta * $delta) + 4/29 )
 	);
 }
