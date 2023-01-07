@@ -2298,9 +2298,9 @@ for my $k(keys %$rgbtab_src) {
 	gamma  => $v->[0],
 	w_name => $v->[1],
 	w      => xyy_from_illuminant($v->[1]),
-	r      => pdl($v->[2],$v->[3],$v->[4]),
-	g      => pdl($v->[5],$v->[6],$v->[7]),
-	b      => pdl($v->[8],$v->[9],$v->[10])
+	r      => pdl(@$v[2..4]),
+	g      => pdl(@$v[5..7]),
+	b      => pdl(@$v[8..10])
     };
     my $str = $k;
     $str =~ tr/A-Z/a-z/;
@@ -2399,11 +2399,9 @@ sub get_rgb {
 	die "Unknown RGB system '$new_rgb'\nKnown ones are:\n\t".join("\n\t",((sort keys %$rgbtab),""))
 	  if !($new_rgb = $rgbtab->{$rgb_abbrevs->{$new_rgb}});
     } elsif(ref $new_rgb eq 'HASH') {
-	my $bad = 0;
 	for my $k(qw/w r g b/) {
-	    $bad = 1 unless( defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
+	    die "Incorrect RGB primaries hash -- see docs" unless( defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
 	}
-	die "Incorrect RGB primaries hash -- see docs" if($bad);
 	$new_rgb->{gamma} //= 1;
     } else {
 	die "bad RGB specification -- see docs";
