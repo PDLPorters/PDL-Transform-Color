@@ -330,8 +330,6 @@ itself.  The module comes with NO WARRANTY.
 
 =cut
 
-use PDL::Transform;
-
 package PDL::Transform::Color;
 
 use strict;
@@ -339,7 +337,6 @@ use warnings;
 use base 'Exporter';
 use PDL::LiteF;
 use PDL::Transform;
-use PDL::MatrixOps;
 use PDL::Math;
 use PDL::Options;
 use Carp;
@@ -374,47 +371,23 @@ our($srgb2cxyz_inv) =
     );
 our($srgb2cxyz_mat) = $srgb2cxyz_inv->inv;
 
-
-sub _strval {
-    my($me) = shift;
-    $me->stringify();
-}
-
-sub _new { new('PDL::Transform::Color',@_) }
+sub _new { __PACKAGE__->new(@_) }
 
 sub new {
-    my($class) = shift;
-    my($parse) = pop;
-    my($name) = pop;
-    my($me) = PDL::Transform::new($class);
-    $me->{name} = $name;
-    $me->{u_opt} = {@_};
-    $me->{idim} = 3;
-    $me->{odim} = 3;
-    
-    my %opt = parse($parse, $me->{u_opt});
-    $me->{params} = \%opt;
-    
+    my $me = shift->SUPER::new;
+    my $parse = pop;
+    $me->{name} = pop;
+    @$me{qw(u_opt idim odim)} = ({@_}, 3, 3);
+    $me->{params} = {parse($parse, $me->{u_opt})};
     return $me;
 }
-
 
 ## Compose with gamma correction if necessary
 sub gammify {
     my $me = shift;
-
-    if( exists($me->{params}->{gamma}) && 
-	defined($me->{params}->{gamma}) && 
-	$me->{params}->{gamma} != 1 ) {
-
-	# Decode gamma from source
-	return ( $me x t_gamma($me->{params}->{gamma}) );
- 
-   } else {
-
-	return $me;
-
-    }
+    return $me if ($me->{params}{gamma} // 1) == 1;
+    # Decode gamma from source
+    return ( $me x t_gamma($me->{params}{gamma}) );
 }
 
 ##############################
@@ -993,20 +966,8 @@ for(qw/m monoc monoch monochr monochro monochrom monochrome/) {$pc_tab_abbrevs->
 
 ### t_pcp - t_pc, but perceptual flag defaults to 1
 sub t_pcp {
-    my $name;
-    if(0+@_ % 2) {
-	$name = shift;
-    } else {
-	$name = undef;
-    }
-    my %opt = @_;
-    $opt{perceptual} = 1;
-
-    if(defined($name)) {
-	return t_pc($name,%opt);
-    } else {
-	return t_pc(%opt);
-    }
+    my $name = (0+@_ % 2) ? shift : undef;
+    return t_pc(defined($name) ? $name : (), @_, perceptual => 1);
 }
 
 our @_t_pc_combinatorics =(
@@ -1996,13 +1957,8 @@ sub t_shift_illuminant {
 	}
     };
 
-    if(exists($me->{params}->{gamma}) &&
-       defined($me->{params}->{gamma}) &&
-       $me->{params}->{gamma} != 1) {
-	return (  t_gamma(1.0/$me->{params}->{gamma}) x $me x t_gamma($me->{params}->{gamma}) );
-    } else {
-	return $me;
-    }
+    return $me if ($me->{params}{gamma} // 1) == 1;
+    return t_gamma(1.0/$me->{params}->{gamma}) x $me x t_gamma($me->{params}->{gamma});
 }
 
 =head2 t_shift_rgb 
@@ -2450,19 +2406,15 @@ sub get_rgb {
     my $new_rgb = shift;
     unless(ref $new_rgb) {
 	$new_rgb=~tr/A-Z/a-z/; $new_rgb =~ s/\s\-//g;
-	my $new_rgb_name = $rgb_abbrevs->{$new_rgb};
-	if($rgbtab->{$new_rgb_name}) {
-	    $new_rgb = $rgbtab->{$new_rgb_name};
-	} else {
-	    die "Unknown RGB system '$new_rgb'\nKnown ones are:\n\t".join("\n\t",((sort keys %$rgbtab),""));
-	}
+	die "Unknown RGB system '$new_rgb'\nKnown ones are:\n\t".join("\n\t",((sort keys %$rgbtab),""))
+	  if !($new_rgb = $rgbtab->{$rgb_abbrevs->{$new_rgb}});
     } elsif(ref $new_rgb eq 'HASH') {
 	my $bad = 0;
 	for my $k(qw/w r g b/) {
-	    $bad = 1 unless( exists($new_rgb->{$k}) and defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
+	    $bad = 1 unless( defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
 	}
-	$new_rgb->{gamma} = 1 unless defined($new_rgb->{gamma});
 	die "Incorrect RGB primaries hash -- see docs" if($bad);
+	$new_rgb->{gamma} //= 1;
     } else {
 	die "bad RGB specification -- see docs";
     }
