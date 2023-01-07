@@ -350,8 +350,6 @@ our @EXPORT = @EXPORT_OK;
 our %EXPORT_TAGS = (Func=>\@EXPORT_OK);
 
 our $PI = 3.141592653589793238462643383279502;
-our $DEG2RAD = $PDL::Transform::DEG2RAD;
-our $RAD2DEG = $PDL::Transform::RAD2DEG;
 
 # Some matrix values of use in RGB conversions...
 
@@ -742,7 +740,7 @@ three primaries.  You can mock this up more compactly by appending
 C<-Cn> to the (possibly abbreviated) name of the table.  (Replace
 the 'n' with a number). 
 
-For example, if you speciy the color table C<sepia> or C<sepia-c0> you'll
+For example, if you specify the color table C<sepia> or C<sepia-c0> you'll
 get the sepiatone color table.  If you specify C<sepia-c5> you'll get 
 almost the exact same color table as C<grepia>.
 
@@ -2382,15 +2380,15 @@ Recognized RGB system names are:
 
 =item Ekta PS5 - developed by Joseph Holms (L<www.josephholmes.com>) for scanned Ektachrome slides (gamma=2.2, white=D50)
 
-=item NTSC - Never The Same Color (U.S. analog TV standard) (gamma=2.2, white=C)
+=item NTSC - National Television System Committee (U.S. analog TV standard) (gamma=2.2, white=C)
 
-=item PAL - Pictures Always Lovely (U.K. analog TV standard) (gamma = 2.2, white=D65)
+=item PAL - Phase Alternating Line (U.K. analog TV standard) (gamma = 2.2, white=D65)
 
 =item ProPhoto - Wide gamut from Kodak, designed for photo output. (gamma=1.8, white=D60)
 
 =item ROMM - Synonym for ProPhoto (gamma=1.8, white=D60)
 
-=item SECAM - Systeme Electronique Contre les AMericains (French analog TV standard) (gamma=2.2, white=D65)
+=item SECAM - Séquentiel de Couleur À Mémoire (French analog TV standard) (gamma=2.2, white=D65)
 
 =item SMPTE-C - Soc. Motion Pict. & TV Engineers (current U.S. TV standard) (gamma=2.2, white=D65)
 
