@@ -1224,6 +1224,34 @@ or a hash), this flag is ignored.
 
 *t_cieXYZ = \&t_xyz;
 
+sub _xyY_RGB_to_M {
+  my ($r, $g, $b) = @_;
+  my ($xr,$yr) = $r->dog;
+  my ($xg,$yg) = $g->dog;
+  my ($xb,$yb) = $b->dog;
+  my $Xr = $xr / ($yr + ($yr==0));
+  my $Yr = 1;
+  my $Zr = (1 - $xr - $yr)/($yr+($yr==0));
+  my $Xg = $xg / ($yg + ($yg==0));
+  my $Yg = 1;
+  my $Zg = (1 - $xg - $yg)/($yg+($yg==0));
+  my $Xb = $xb / ($yb + ($yb==0));
+  my $Yb = 1;
+  my $Zb = (1 - $xb - $yb)/($yb+($yb==0));
+  pdl( [ $Xr, $Xg, $Xb ], [$Yr, $Yg, $Yb], [$Zr, $Zg, $Zb] );
+}
+
+sub _M_relativise {
+  my ($M, $w) = @_;
+  my $Minv = $M->inv;
+  my ($xw, $yw, $Yw) = $w->dog;
+  my $Xw = $xw * $Yw / ($yw + ($yw==0));
+  my $Zw = (1 - $xw - $yw)*$Yw / ($yw+($yw==0));
+  my $XYZw = pdl($Xw,$Yw,$Zw);
+  my $Srgb = ($Minv x $XYZw->slice('*1'))->slice('(0)'); # row vector
+  $M * $Srgb;
+}
+
 sub t_xyz {
     my ($me) = _new(@_, 'CIE XYZ',
 		    {gamma=>1,
@@ -1237,40 +1265,12 @@ sub t_xyz {
 
 	$me->{params}->{mat} = $srgb2cxyz_mat;
 	$me->{params}->{inv} = $srgb2cxyz_inv;
-		
+
     } else {
-	my $rgb = get_rgb($me->{params}->{rgb_system});
-
-	my ($xr,$yr) = ($rgb->{r}->slice('(0)'),$rgb->{r}->slice('(1)'));
-	my ($xg,$yg) = ($rgb->{g}->slice('(0)'),$rgb->{g}->slice('(1)'));
-	my ($xb,$yb) = ($rgb->{b}->slice('(0)'),$rgb->{b}->slice('(1)'));
-	
-	my $Xr = $xr / ($yr + ($yr==0));
-	my $Yr = 1;
-	my $Zr = (1 - $xr - $yr)/($yr+($yr==0));
-	my $Xg = $xg / ($yg + ($yg==0));
-	my $Yg = 1;
-	my $Zg = (1 - $xg - $yg)/($yg+($yg==0));
-	my $Xb = $xb / ($yb + ($yb==0));
-	my $Yb = 1;
-	my $Zb = (1 - $xb - $yb)/($yb+($yb==0));
-
-	my $M = pdl( [ $Xr, $Xg, $Xb ], [$Yr, $Yg, $Yb], [$Zr, $Zg, $Zb] );
-	my $Minv = $M->inv;
-
-	my ($xw, $yw, $Yw) = ($rgb->{w}->slice('(0)'),$rgb->{w}->slice('(1)'),$rgb->{w}->slice('(2)'));
-	my $Xw = $xw * $Yw / ($yw + ($yw==0));
-	my $Zw = (1 - $xw - $yw)*$Yw / ($yw+($yw==0));
-	my $XYZw = pdl($Xw,$Yw,$Zw);
-
-	my $Srgb = ($Minv x $XYZw->slice('*1'))->slice('(0)'); # row vector
-	$M *= $Srgb;
-	$me->{params}->{mat} = $M;
-	$me->{params}->{inv} = $M->inv;
-
-	if($me->{params}->{use_system_gamma}) {
-	    $me->{params}->{gamma} = $rgb->{gamma};
-	}
+	my $rgb = get_rgb($me->{params}{rgb_system});
+	my $M = _M_relativise(_xyY_RGB_to_M(@$rgb{qw(r g b)}), $rgb->{w});
+	@{$me->{params}}{qw(mat inv)} = ($M, $M->inv);
+	$me->{params}{gamma} = $rgb->{gamma} if $me->{params}{use_system_gamma};
     }
 
     # func and inv get linearized versions (gamma handled below)

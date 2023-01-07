@@ -91,21 +91,23 @@ ok(all( ($itriplet*10000)->rint == ($i2triplet*10000)->rint), "non-grey sample i
 ##########
 # test t_xyz
 $itriplet = pdl([1,0,0],[0,1,0],[0,0,1]);
-eval { $otriplet = $itriplet->apply(t_xyz()); };
-is $@, '', "t_xyz runs OK ($@)";
-# Check against chromaticities of the sRGB primaries
-my $xpypzptriplet = $otriplet / $otriplet->sumover->slice('*1');
-ok( all( ($xpypzptriplet->slice('0:1')*1000)->rint ==
-	 ( pdl( [ 0.640, 0.330 ], 
-		[ 0.300, 0.600 ],
-		[ 0.150, 0.060 ]
-	   )
-	   * 1000)->rint
-    ),
-    "XYZ translation works for R, G, and B vectors") or diag "got: ", ($xpypzptriplet->slice('0:1')*1000)->rint;
-eval { $i2triplet = $otriplet->invert(t_xyz()); };
-is $@, '', "t_xyz inverse runs OK";
-ok( all( ($i2triplet*10000)->rint == ($itriplet*10000)->rint ), "t_xyz inverse works OK");
+for my $trans (t_xyz(), t_xyz(rgb_system=>'sRGB')) {
+  eval { $otriplet = $itriplet->apply($trans); };
+  is $@, '', "t_xyz runs OK ($@)";
+  # Check against chromaticities of the sRGB primaries
+  my $xpypzptriplet = $otriplet / $otriplet->sumover->slice('*1');
+  ok( all( ($xpypzptriplet->slice('0:1')*1000)->rint ==
+           ( pdl( [ 0.640, 0.330 ],
+                  [ 0.300, 0.600 ],
+                  [ 0.150, 0.060 ]
+             )
+             * 1000)->rint
+      ),
+      "XYZ translation works for R, G, and B vectors ($trans)") or diag "got: ", ($xpypzptriplet->slice('0:1')*1000)->rint;
+  eval { $i2triplet = $otriplet->invert($trans); };
+  is $@, '', "t_xyz inverse runs OK";
+  ok( all( ($i2triplet*10000)->rint == ($itriplet*10000)->rint ), "t_xyz inverse works OK ($trans)") or diag "got: ", ($i2triplet*10000)->rint;
+}
 
 ##########
 # test t_rgi
@@ -114,14 +116,14 @@ my $brgbcmyw = pdl([0,0,0],
 		   [0,1,1],[1,0,1],[1,1,0],
 		   [1,1,1]);
 my $ocolors;
-eval { $t = t_rgi(); }; 
+eval { $t = t_rgi(); };
 is $@, '', "t_rgi runs OK ($@)";
 eval { $ocolors = $brgbcmyw->apply($t) };
 is $@, '', "t_rgi forward transform is OK ($@)";
 my $test = pdl([0,0,0],
 	       [ 1 , 0 ,   0.3333333 ], [ 0 , 1 ,   0.3333333 ], [ 0 , 0 ,    0.3333333 ],
 	       [ 0 , 0.5 , 0.6666667 ], [ 0.5 , 0 , 0.6666667 ], [0.5 , 0.5 , 0.6666667 ],
-	       [ 0.3333333 , 0.3333333 , 1         ] 
+	       [ 0.3333333 , 0.3333333 , 1         ]
     );
 ok( all( ($test*10000)->rint == ($ocolors*10000)->rint ), "t_rgi passees 8-color test");
 
