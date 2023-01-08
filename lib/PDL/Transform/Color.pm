@@ -2394,18 +2394,16 @@ Recognized RGB system names are:
     
 sub get_rgb {
     my $new_rgb = shift;
-    unless(ref $new_rgb) {
-	$new_rgb=~tr/A-Z/a-z/; $new_rgb =~ s/\s\-//g;
-	die "Unknown RGB system '$new_rgb'\nKnown ones are:\n\t".join("\n\t",((sort keys %$rgbtab),""))
-	  if !($new_rgb = $rgbtab->{$rgb_abbrevs->{$new_rgb}});
-    } elsif(ref $new_rgb eq 'HASH') {
-	for my $k(qw/w r g b/) {
+    if (ref $new_rgb eq 'HASH') {
+	for my $k (qw/w r g b/) {
 	    die "Incorrect RGB primaries hash -- see docs" unless( defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
 	}
-	$new_rgb->{gamma} //= 1;
-    } else {
-	die "bad RGB specification -- see docs";
+	return { gamma=>1, %$new_rgb };
     }
+    die "bad RGB specification -- see docs" if ref $new_rgb;
+    $new_rgb=~tr/A-Z/a-z/; $new_rgb =~ s/\s\-//g;
+    die join "\n\t","Unknown RGB system '$new_rgb'\nKnown ones are:", (sort keys %$rgbtab),""
+      if !($new_rgb = $rgbtab->{$rgb_abbrevs->{$new_rgb}});
     return $new_rgb;
 }
 
