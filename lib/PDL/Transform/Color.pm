@@ -1,3 +1,5 @@
+=encoding utf8
+
 =head1 NAME
 
 PDL::Transform::Color - Useful color system conversions for PDL
