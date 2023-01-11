@@ -114,7 +114,7 @@ supplied with the module.
 
 =head1 OVERVIEW OF COLOR THEORY
 
-Beacuse of the biophysics of the human eye, color is well represented
+Because of the biophysics of the human eye, color is well represented
 as a 3-vector of red, green, and blue brightness values representing
 brightness in the long, middle, and short portions of the visible
 spectrum.  However, the absorption/sensitivity bands overlap
@@ -156,7 +156,7 @@ CIE defined several other important color systems: first, an XYZ
 system based on nonphysical primaries X, Y, and Z that correspond to
 red, green, and blue, respectively. The XYZ system can represent all
 colors detectable to the human eye with positive-definite intensities
-of the "primaries": the necesary negative intensities are hidden in
+of the "primaries": the necessary negative intensities are hidden in
 the formal spectrum of each of the primaries.  The Y primary of this
 system corresponds closely to green, and is used by CIE as a proxy for
 overall luminance.
@@ -313,7 +313,7 @@ is correct.
 
 Contrariwise, the C<t_brgb> export transform has a C<display_gamma> option
 that specifies the gamma function for the output bytes.  Therefore,
-C<t_brgb(display_gamma=>2)> square-roots the data before export (so that
+C<< t_brgb(display_gamma=>2) >> square-roots the data before export (so that
 squaring them would yield numbers proportional to the desired luminance
 of a display device).
 
@@ -582,7 +582,7 @@ color paths.  Autumn is similar to heat, but less garish.
 
 =item dop, dop1, dop2, dop3
 
-These are various presentations of signed infromation, originally
+These are various presentations of signed information, originally
 intended to display Doppler shift.  They are all quasi-photometric
 and split.
 
@@ -780,8 +780,8 @@ HSV is a stacked-cone system: iso-V surfaces are parallel to the
 bright faces of the RGB cube, so maximal bright saturation occurs when
 S=1 and V=1.  This means that output luminosity drops with saturation,
 but due to Helmholtz-Kolrausch effect (linking saturation to apparent
-brightness) the *perceived* brightness is less S-dependent: V follows
-total *apparent brightness* of the output, though output luminosity
+brightness) the I<perceived> brightness is less S-dependent: V follows
+total I<apparent brightness> of the output, though output luminosity
 drops with S.
 
 You can represent out-of-gamut values in either system, by using
