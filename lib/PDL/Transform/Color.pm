@@ -41,7 +41,7 @@ now, as this is a subclass of PDL::Transform.  Transforms represent
 and encapsulate vector transformations -- one- or two-way vector
 functions that may be applied, composed, or (if possible) inverted.
 They are created through constructor methods that often allow
-parametric adjustment at creation time. 
+parametric adjustment at creation time.
 
 If you just want to "manipulate some RGB images" and not learn about
 the esoterica of color representations, you can treat all the routines
@@ -66,7 +66,7 @@ represented as a 3-vector, the human eye does not cleanly separate the
 spectra responsible for red, green, and blue stimuli.  As a result, no
 trio of physical primary colors (which must have positive-definite
 spectra and positive-definite overall intensities) can represent every
-perceivable color -- even though they form a basis of color space. 
+perceivable color -- even though they form a basis of color space.
 
 But in digital representation, there is no hard limit on the values
 of the RGB vectors -- they can be negative or arbitrarily large.  This
@@ -93,9 +93,9 @@ functions) nonlinear scaling.  In general, you can use C<!t_srgb> to
 import existing images you may have found lying around the net;
 manipulate their hue, etc.; and re-export with C<t_srgb>.
 
-If you prefer to work with direct gamma functions or straight 
-scaling, you can import/export from/to byte values with C<t_brgb> 
-instead.  For example, to export a color in the CIE RGB system 
+If you prefer to work with direct gamma functions or straight
+scaling, you can import/export from/to byte values with C<t_brgb>
+instead.  For example, to export a color in the CIE RGB system
 (different primaries than sRGB), use C<t_brgb() x t_ciergb>.
 
 There are also some pseudocolor transformations, which convert a
@@ -132,7 +132,7 @@ standard developed in 1931 by the Commission Internationale de
 l'Eclairage (CIE; International Commission on Illumination).  The 1931
 CIE RGB system is also called simply CIERGB by many sources.  It uses
 primary wavelengths of 700nm (red), 546.1 nm (green), and 435.8 nm
-(blue).  
+(blue).
 
 The most universal "computer" representation is the sRGB standard
 defined by Anderson et al.  (1996), which uses on slightly different
@@ -154,7 +154,7 @@ the formal spectrum of each of the primaries.  The Y primary of this
 system corresponds closely to green, and is used by CIE as a proxy for
 overall luminance.
 
-The CIE also separated "chrominance" and "luminance" signals, in a 
+The CIE also separated "chrominance" and "luminance" signals, in a
 separate system called "xyY", which represents color as sum-normalized
 vectors "x=X/(X+Y+Z), "y=Y/(X+Y+Z)", and "z=Z/(X+Y+Z)".  By construction,
 x+y+z=1, so "x" and "y" alone describe the color range of the system, and
@@ -183,7 +183,7 @@ Provision exists for converting between different RGB systems with
 different primaries and different white points, by linearizing and
 then scaling.  The most straightforward way to use this module to
 convert between two RGB systems (neither of which is lsRGB) is to
-inverse-transform one to lsRGB, then transform forward to the other. 
+inverse-transform one to lsRGB, then transform forward to the other.
 This is accomplished with the C<t_shift_rgb> transform.
 
 Many other representations than RGB exist to separate chromatic
@@ -208,7 +208,7 @@ the Cartesian norm between vectors in LAB space is approximately
 proportional to perceived difference between the corresponding colors.
 The system is thus useful for communicating color values precisely
 across different groups or for developing perceptually-uniform display
-maps for generated data.  The L, A, and B coordinates are highly 
+maps for generated data.  The L, A, and B coordinates are highly
 nonlinear to approximately match the typical human visual system.
 
 Other related systems include YUV, YPbPr, and YCbCr -- which are used
@@ -225,7 +225,7 @@ Two simple Munsell-like representations that work within the gamut of
 a particular RGB basis are HSL and HSV.  Both of these systems are
 loose representations that are best defined relative to a particular
 RGB system. They are both designed specifically to represent an entire
-RGB gamut with a quasi-polar coordinate system, and are based on 
+RGB gamut with a quasi-polar coordinate system, and are based on
 hexagonal angle -- i.e. they are not exactly polar in nature.
 
 HSL separates "Hue" and "Saturation" from "Lightness".  Hue represents
@@ -293,19 +293,19 @@ color manipulation is performed in linear (gamma=1) representation --
 i.e. if you specify a gamma to a conversion transform, the normalized
 RGB values are B<decoded> to linear physical values before processing
 in the forward direction, or B<encoded> after processing in the
-reverse direction.  
+reverse direction.
 
 For example, to square the normalized floating-point lsRGB values
 before conversion to bRGB, use C<t_brgb(gamma=>2)>.  The "gamma"
 option specifies that the desired brightness of the output device
 varies as the square of the pixel value in the stored data.
 
-Since lsRGB is the default working space for most transforms, you 
-don't normally need to specify C<gamma> -- the default value of 1.0 
+Since lsRGB is the default working space for most transforms, you
+don't normally need to specify C<gamma> -- the default value of 1.0
 is correct.
 
 Contrariwise, the C<t_brgb> export transform has a C<display_gamma> option
-that specifies the gamma function for the output bytes.  Therefore, 
+that specifies the gamma function for the output bytes.  Therefore,
 C<t_brgb(display_gamma=>2)> square-roots the data before export (so that
 squaring them would yield numbers proportional to the desired luminance
 of a display device).
@@ -321,12 +321,6 @@ gamma-corrected 24-bit color systems can be handled directly with
 C<t_brgb> and its C<display_gamma> option.
 
 =back
-
-=head1 AUTHOR
-
-Copyright 2017, Craig DeForest (deforest@boulder.swri.edu).  This
-module may be modified and distributed under the same terms as PDL
-itself.  The module comes with NO WARRANTY.
 
 =head1 FUNCTIONS
 
@@ -384,7 +378,7 @@ sub gammify {
 
 ##############################
 
-=head2 t_gamma 
+=head2 t_gamma
 
 =for usage
 
@@ -402,7 +396,7 @@ indicated -- e.g. if the C<$gamma> parameter at generation time is 2,
 then the forward direction squares its input, and the inverse direction
 takes the square root (encodes the gamma correction).
 
-Gamma correction is implemented using a sign-tolerant approach: 
+Gamma correction is implemented using a sign-tolerant approach:
 all values have their magnitude scaled with the power law, regardless
 of the sign of the value.
 
@@ -434,7 +428,7 @@ sub t_gamma {
 	}
 	$out;
     };
-	
+
     $me;
 }
 
@@ -462,7 +456,7 @@ C<t_brgb> accepts the following options, all of which may be abbreviated:
 
 =item gamma (default 1)
 
-If set, this is a gamma-encoding value for the original lsRGB, which 
+If set, this is a gamma-encoding value for the original lsRGB, which
 is decoded before the transform.
 
 =item display_gamma (default 2.2)
@@ -475,7 +469,7 @@ the sRGB standard.  See also C<t_srgb>.
 
 =item clip (default 1)
 
-If set, the output is clipped to [0,256) in the forward direction and 
+If set, the output is clipped to [0,256) in the forward direction and
 to [0,1] in the reverse direction.
 
 =item byte (default 1)
@@ -506,14 +500,14 @@ sub t_brgb {
 	if($opt->{display_gamma} != 1) {
 	    $out *= ($out->abs)**(1.0/$opt->{display_gamma} - 1);
 	}
-	
+
 	$out *= 255.0;
 
 	if($opt->{byte}) {
 	    $out = byte($out->rint->clip(0,255));
 	} elsif($opt->{clip}) {
 	    $out->inplace->clip(0,255.49999);
-	} 
+	}
 
 	$out;
     };
@@ -532,11 +526,11 @@ sub t_brgb {
 	}
 	$out;
     };
-    
+
     return gammify($me);
 }
 
-=head2 t_srgb 
+=head2 t_srgb
 
 =for ref
 
@@ -555,19 +549,19 @@ C<t_srgb> accepts the following options, all of which may be abbreviated:
 
 =item gamma (default 1)
 
-If set, this is a gamma-encoding value for the original lsRGB, which 
+If set, this is a gamma-encoding value for the original lsRGB, which
 is decoded before the transform.
 
-=item byte (default 1) 
+=item byte (default 1)
 
 If set, this causes the output to be clipped to the range [0,255] and rounded
-to a byte type PDL ("24-bit color").  (The reverse transform always creates 
+to a byte type PDL ("24-bit color").  (The reverse transform always creates
 a floating point value, since lsRGB exists on the interval [0,1] and an integer
 type would be useless.)
 
 =item clip (default 0)
 
-If set, this causes output to be clipped to the range [0,255] even if the 
+If set, this causes output to be clipped to the range [0,255] even if the
 C<byte> option is not set.
 
 =back
@@ -581,9 +575,9 @@ sub _srgb_encode {
     my $b = ($a->is_inplace ? $a->new_or_inplace : $a->copy);
     my $sgn = 2*(0.5-($a<0));
     $b->inplace->abs;
-    $b .= ( 
+    $b .= (
 	($b <= 0.00304) * (12.92 * $b )  +
-	($b >  0.00304) * ( 
+	($b >  0.00304) * (
 	    (1.055 * ( $b * (($b+1e-30) ** (1.0/2.4 - 1)) ) ) - 0.055
 	)
 	);
@@ -597,7 +591,7 @@ sub _srgb_decode {
     my $sgn = 2*(0.5-($a<0));
     $b->inplace->abs;
     my $c = ($b+0.055)/1.055;
-    $b .= ( 
+    $b .= (
 	($b <= 0.03928) * ( $b / 12.92 ) +
 	($b >  0.03928) * (
 	    $c * ( $c->abs ** 1.4 )
@@ -606,7 +600,7 @@ sub _srgb_decode {
     $b *= $sgn;
     return $b;
 }
-    
+
 sub t_srgb {
     my($me) = _new(@_,'encode 24-bit sRGB',
 		   {clip=>0,
@@ -636,7 +630,7 @@ sub t_srgb {
 
     $me->{inv} = sub {
 	my($in,$opt) = @_;
-	
+
 	my $rgb = $in / pdl(255.0);
 
 	_srgb_decode($rgb->inplace);
@@ -653,7 +647,7 @@ sub t_srgb {
 
 =head2 t_pc and t_pcp
 
-=for ref 
+=for ref
 
 These two transforms implement  a general purpose pseudocolor
 transformation.  You input a monochromatic value (zero active dims)
@@ -663,8 +657,8 @@ common use case is to generate sRGB values, the default output is sRGB
 produce output in some other system by composing t_pc with a color
 transformation.
 
-C<t_pc> generates pseudocolor transforms ("color maps") with 
-a photometric interpretation of the input:  the input data are 
+C<t_pc> generates pseudocolor transforms ("color maps") with
+a photometric interpretation of the input:  the input data are
 considered to be proportional to some kind of measured luminance
 or similar physical parameter.   This produces "correct" renderings
 of scenes captured by scientific cameras and similar instrumentation.
@@ -672,35 +666,35 @@ of scenes captured by scientific cameras and similar instrumentation.
 C<t_pcp> generates pseudocolor transforms ("color maps") with a
 perceptual interpretation of the input: the input data are considered
 to be proportional to the *perceptual* variation desired across the
-display.  This produces "correct" renderings of many non-luminant 
+display.  This produces "correct" renderings of many non-luminant
 types of data, such as temperature, Doppler shift, frequency plots,
 etc.
 
 Both C<t_pc> and C<t_pcp> generate transforms based on a collection
 of named transformations stored in an internal database (the global
-hash ref C<$PDL::Transform::Color::pc_tab>).  The transformations 
-come in two basic sorts:  quasi-photometric transformations, 
+hash ref C<$PDL::Transform::Color::pc_tab>).  The transformations
+come in two basic sorts:  quasi-photometric transformations,
 which use luminance as the dominant varying parameter; and non-
 photometric transformations, which use hue or saturation as the
 dominant varying parameter.  Only the photometric transformations
 get modified by C<t_pc> vs C<t_pcp> -- for example, C<t_pcp('rainbow')>
-will yield the same transform as C<t_pc('rainbow')>. 
+will yield the same transform as C<t_pc('rainbow')>.
 
 Some of the color transformations are "split" and intended for display of signed
 data -- for example, the C<dop> transformation fades red-to-white-to-blue and
-is intended for display of Doppler or similar signals. 
+is intended for display of Doppler or similar signals.
 
 NOTE: C<t_pc> and C<t_pcp> work BACKWARDS from most of the
 transformations in this package: they convert FROM a data value TO sRGB
 or lsRGB.
 
 There are options to adjust input gamma and the domain of the
-transformation (e.g. if your input data are on [0,1000] instead of 
+transformation (e.g. if your input data are on [0,1000] instead of
 [0,1]).
 
 If you feed in no arguments at all, either C<t_pc> or C<t_pcp> will
 list a collection of named pseudocolor transformations that work, on
-the standard output.  
+the standard output.
 
 Options accepted are:
 
@@ -709,7 +703,7 @@ Options accepted are:
 =item gamma (default 1) - presumed encoding gamma of the input
 
 The input is *decoded* from this gamma value.  1 treats it as linear
-in luminance.  
+in luminance.
 
 =item lsRGB (default 0) - produce lsRGB output instead of sRGB.
 
@@ -722,7 +716,7 @@ in luminance.
 Input data are by default clipped to [0,1] before application of the
 color map.  Specifying an undefined value causes the color map to be
 autoscaled to the input data, e.g. C<ir=>[0,undef]> causes the color map
-to be scaled from 0 to the maximum value of the input.  For full 
+to be scaled from 0 to the maximum value of the input.  For full
 autoscaling, use C<ir=>[]>.
 
 =item combination (default 0) - recombine r,g,b post facto
@@ -732,15 +726,15 @@ b after all the other calculations are done.  You feed in a number
 from 0 to 5.  If it's nonzero, you get a different combination of the
 three primaries.  You can mock this up more compactly by appending
 C<-Cn> to the (possibly abbreviated) name of the table.  (Replace
-the 'n' with a number). 
+the 'n' with a number).
 
 For example, if you specify the color table C<sepia> or C<sepia-c0> you'll
-get the sepiatone color table.  If you specify C<sepia-c5> you'll get 
+get the sepiatone color table.  If you specify C<sepia-c5> you'll get
 almost the exact same color table as C<grepia>.
 
 =back
 
-You can abbreviate color table names with unique abbreviations.  
+You can abbreviate color table names with unique abbreviations.
 Tables currently accepted, and their intended uses are:
 
 =over 3
@@ -749,7 +743,7 @@ Tables currently accepted, and their intended uses are:
 
 =over 3
 
-=item  grey, gray, or mono (photometric) 
+=item  grey, gray, or mono (photometric)
 
 Simple monochrome.
 
@@ -759,11 +753,11 @@ These use color scaling to enhance contrast in a simple luminance
 transfer.  C<sepia> is a black-brown-white curve reminiscent of sepia
 ink.  The others are similar, but emphasize different primary colors.
 The 'ryg' duplicates sepiatone, but with green highlights to increase
-contrast in near-saturated parts of an image. 
+contrast in near-saturated parts of an image.
 
 =item heat
 
-This black-red-yellow-white is reminiscent of blackbody curves 
+This black-red-yellow-white is reminiscent of blackbody curves
 (but does not match them rigorously).
 
 =item pm3d, voy
@@ -779,7 +773,7 @@ deep green through blue to white
 
 =item spring, summer, autumn, winter
 
-These are reminiscent of the "seasonal" colors provided by MatLab.  The 
+These are reminiscent of the "seasonal" colors provided by MatLab.  The
 "spring" is horrendous but may be useful for certain aesthetic presentations.
 Summer and Winter are similar to the sepia-like tables, but with different
 color paths.  Autumn is similar to heat, but less garish.
@@ -798,7 +792,7 @@ and split.
 
 =item vbg
 
-This is a violet-black-green signed fade useful for non-Doppler 
+This is a violet-black-green signed fade useful for non-Doppler
 signed quantities.  Quasi-photometric and split.
 
 =back
@@ -839,7 +833,7 @@ The full "color wheel", including the controversial magenta-to-red segment
 ## doc      Short one-line string describing the pseudocolor map
 ## igamma   Scaled input is *decoded* from this gamma (raised to this power) if present
 ## ogamma   Output is *encoded to this gamma (rooted by this power) if present
-## phot     Flag: if set, this pseudocolor map is approximately photometric and can be 
+## phot     Flag: if set, this pseudocolor map is approximately photometric and can be
 ##            scaled differently by the direct and perceptual color table methods
 ## split    This is the "zero point" on [0-1] of the color map.  Default is 0.  Useful
 ##            for gamma scaling etc; primarily used by doppler and other signed tables.
@@ -909,7 +903,7 @@ our $pc_tab = {
     ryg     => { type=>'hsv', subs=> [ sub{ (0.5*($_[0]-0.333/2))%1 }, sub{0.8+0.2*$_[0]}, sub{$_[0]} ],
 		 doc=>"A quasi-sepiatone (R/Y) with green highlights",phot=>1, igamma=>0.7 },
 
-    extra   => { type=>'hsv', subs=>[ sub{ (0.85*($_[0]**0.75-0.333/2))%1}, sub{0.8+0.2*$_[0]-0.8*$_[0]**6}, 
+    extra   => { type=>'hsv', subs=>[ sub{ (0.85*($_[0]**0.75-0.333/2))%1}, sub{0.8+0.2*$_[0]-0.8*$_[0]**6},
 				      sub { 1 - exp(-$_[0]/0.15) - 0.08 }],
 	          doc=>"Extra-broad photometric; also try -c1 etc.",phot=>1,igamma=>0.55 },
 
@@ -999,7 +993,7 @@ sub t_pc {
 	t_pc(); # generate usage message
     }
 
-    
+
     # Generate the object
     my($me) = _new(@_, "pseudocolor sRGB encoding ($lut_name)",
 		   {
@@ -1019,7 +1013,7 @@ sub t_pc {
     unless(defined($pc_tab->{$lut_name})){
 	die "t_pc: internal error (name $lut_name resolves but points to nothing)";
     }
-    
+
     # Handle domain-irange synonym
     $me->{params}->{irange} = $me->{params}->{domain} if(defined($me->{params}->{domain}));
 
@@ -1029,7 +1023,7 @@ sub t_pc {
 	){
 	die "t_pc: 'domain' or 'irange' parameter must be an array ref ";
     }
-    if($me->{params}->{irange}->[0] == $me->{params}->{irange}->[1]  and 
+    if($me->{params}->{irange}->[0] == $me->{params}->{irange}->[1]  and
        (defined($me->{params}->{irange}->[0]) && defined($me->{params}->{irange}->[1]))) {
 	die "t_pc: 'domain' or 'irange' parameter must specify a nonempty range";
     }
@@ -1041,23 +1035,23 @@ sub t_pc {
 	$me->{params}->{combination} = $mod_combo;
     }
 
-    
+
     if($me->{params}->{combination} < 0 || $me->{params}->{combination} > 5) {
 	die "t_pc/t_pcp: 'combination' parameter must be between 0 and 5 inclusive";
     }
 
     # Copy the conversion subs from the map table entry to the object, with combinatorics as
     # needed.
-    
+
     if($me->{params}->{lut}->{type} eq 'hsv') {
 
 	# hsv - copy subs in from table, and implement combinatorics with a hue transform
-	
+
 	$me->{params}->{subs} = [  @{$me->{params}->{lut}->{subs}}  ]; # copy the subs for the map
 	if($me->{params}->{combination}) {
 	    my $s0 = $me->{params}->{subs}->[0];
-	    $me->{params}->{subs}->[0] = 
-		sub { 
+	    $me->{params}->{subs}->[0] =
+		sub {
 		    my $a = &$s0(@_);
 		    $a += 0.33 * $me->{params}->{combination};
 		    $a *= -1 if($me->{params}->{combination} > 2);
@@ -1069,7 +1063,7 @@ sub t_pc {
 
 	# rgb - do any combinatorics as needed
 	$me->{params}->{subs} = [ @{$me->{params}->{lut}->{subs}}[ (@{  $_t_pc_combinatorics[$me->{params}->{combination}] })  ]  ];
-	
+
     }
 
     # Generate the forward transform
@@ -1079,7 +1073,7 @@ sub t_pc {
 	my $in2 = $in->new_or_inplace;
 
 	my ($min,$max) = @{$opt->{irange}};
-	
+
 	unless(defined($min) || defined($max)) {
 	    ($min,$max) = $in->minmax;
 	} elsif( !defined($min) ){
@@ -1161,18 +1155,18 @@ sub t_pc {
     if($me->{params}->{lut}->{type} eq 'hsv') {
 	$out = (!t_hsv()) x $out;
     }
-    
+
     if(abs($me->{params}->{gamma}-1.0) > 1e-5) {
 	$out = $out x t_gamma($me->{params}->{gamma});
     }
-    
+
     unless($me->{params}->{lsRGB}) {
 	$out = t_srgb(clip=>$me->{params}->{clip}, byte=>$me->{params}->{byte}) x $out;
     }
 
     return $out;
 }
-    
+
 ################################################################################
 ################################################################################
 
@@ -1201,7 +1195,7 @@ C<t_ciexyz> accepts the following options:
 
 =over 3
 
-=item gamma (default 1) 
+=item gamma (default 1)
 
 This is taken to be a coded gamma value in the original lsRGB, which
 is decoded before conversion to the CIE XYZ system.
@@ -1209,7 +1203,7 @@ is decoded before conversion to the CIE XYZ system.
 =item rgb_system (default undef)
 
 If present, this must be either the name of an RGB system or an RGB system
-descriptor hash as described in C<t_shift_rgb>.  If none is specified, then 
+descriptor hash as described in C<t_shift_rgb>.  If none is specified, then
 the standard linearized sRGB used by the rest of the module is assumed.
 
 =item use_system_gamma (default 0)
@@ -1280,7 +1274,7 @@ sub t_xyz {
 	my($in, $opt) = @_;
 
 	my $out = ( $opt->{mat} x $in->slice('*1') )->slice('(0)')->sever;
-	
+
 	if($in->is_inplace) {
 	    $in .= $out;
 	    $out = $in;
@@ -1365,9 +1359,9 @@ can be perceived by the typical human eye, and also many that can't,
 with positive-definite coordinates.
 
 Most of the domain space (which runs over [0-1] in all three dimensions)
-is inaccessible to most displays, because RGB gamuts are generally 
+is inaccessible to most displays, because RGB gamuts are generally
 smaller than the actual visual gamut, which in turn is a subset of the
-actual xyY data space. 
+actual xyY data space.
 
 =cut
 
@@ -1400,7 +1394,7 @@ sub t_xyy {
 	$XYZ->slice('(0)') .= $in->slice('(0)') * $in->slice('(2)') / $in1;
 	$XYZ->slice('(1)') .= $in->slice('(2)');
 	$XYZ->slice('(2)') .= $in->slice('(2)') * (1 - $in->slice('(0)') - $in->slice('(1)')) / $in1;
-	
+
 	if($in->is_inplace) {
 	    $in .= $XYZ;
 	    $XYZ = $in;
@@ -1421,18 +1415,18 @@ sub t_xyy {
 
 =for ref
 
-Convert RGB to CIE Lab colors.  C<Lab> stands for Lightness, 
-"a", and "b", representing the overall luminance detection and 
-two opponent systems (a: red/green, and b:yellow/blue) in the human 
+Convert RGB to CIE Lab colors.  C<Lab> stands for Lightness,
+"a", and "b", representing the overall luminance detection and
+two opponent systems (a: red/green, and b:yellow/blue) in the human
 eye.  Lab colors are approximately perceptually uniform:  they're
-mapped using a nonlinear transformation involving cube roots.  Lab 
+mapped using a nonlinear transformation involving cube roots.  Lab
 has the property that Euclidean distances of equal size in the space
 yield approximately equal perceptual shifts in the represented color.
 
 Lightness runs 0-100, and the a and b opponent systems run -100 to +100.
 
 The Lab space includes the entire CIE XYZ gamut and many "impossible colors".
-that cannot be represented directly with physical light.  Many of these 
+that cannot be represented directly with physical light.  Many of these
 "impossible colors" (also "chimeric colors") can be experienced directly
 using visual fatigue effects, and can be classified using Lab.
 
@@ -1445,7 +1439,7 @@ sub f_lab {
     my $in = shift;
     my $delta = 6/29;
     my $delta3 = $delta * $delta * $delta;
-    return ( 
+    return (
 	($in >  $delta3) * ( $in * (($in->abs+($in==0)) ** (1/3-1)) ) +
 	($in <= $delta3) * ( $in / (3 * $delta * $delta) + 4/29 )
 	);
@@ -1473,9 +1467,9 @@ sub f_lab_inv {
 Converts CIE XYZ to CIE Lab.
 
 =cut
-    
+
 sub t_xyz2lab {
-	
+
     my ($me) = _new(@_,'XYZ->Lab',
 		    {
 			white=>"D65",
@@ -1493,9 +1487,9 @@ sub t_xyz2lab {
 	my($out) = zeroes($in);
 
 	my $wp = $opt->{wp_xyz} + ($opt->{wp_xyz}==0);
-	
+
 	my $FYp = f_lab(  $in->slice('(1)') / $wp->slice('(1)')  );
-	    
+
 	$out->slice('(0)') .= 116 * $FYp - 16;
 	$out->slice('(1)') .= 500 * ( f_lab( $in->slice('(0)') / $wp->slice('(0)') ) - $FYp   );
 	$out->slice('(2)') .= 200 * ( $FYp - f_lab( $in->slice('(2)') / $wp->slice('(2)') ) );
@@ -1512,7 +1506,7 @@ sub t_xyz2lab {
 	my($out) = zeroes($in);
 
 	my $Lterm = ($in->slice('(0)')+16)/116;
-	
+
 	$out->slice('(0)') .= $opt->{wp_xyz}->slice('(0)') * f_lab_inv( $Lterm + $in->slice('(1)')/500 );
 	$out->slice('(1)') .= $opt->{wp_xyz}->slice('(1)') * f_lab_inv( $Lterm );
 	$out->slice('(2)') .= $opt->{wp_xyz}->slice('(2)') * f_lab_inv( $Lterm - $in->slice('(2)')/200 );
@@ -1523,7 +1517,7 @@ sub t_xyz2lab {
 	}
 	return $out;
     };
-    
+
     return $me;
 }
 
@@ -1536,7 +1530,7 @@ sub t_lab {
 			white=>'D65',
 		    }
 	);
-    return ( 
+    return (
 	t_xyz2lab(white=>$me->{params}->{white} )  x
 	t_xyz( gamma=>$me->{params}->{gamma})
 	);
@@ -1546,7 +1540,7 @@ sub t_lab {
 =head2 t_cmyk
 
 converts rgb to cmyk in the most straightforward way (by subtracting
-RGB values from unity).  
+RGB values from unity).
 
 CMYK and other process spaces are very complicated; this transform
 presents only a relatively simple conversion that does not take into
@@ -1593,7 +1587,7 @@ sub t_cmyk {
     $me->{func} = sub {
 	my($in,$opt) = @_;
 	my $out = zeroes( 4, $in->slice('(0)')->dims );
-	
+
 	my $Kp = $in->maximum->slice('*1');
 	(my $K = $out->slice('3')) .= 1 - $Kp;
 	$out->slice('0:2') .= ($Kp - $in->slice('0:2')) / $Kp;
@@ -1619,7 +1613,7 @@ sub t_cmyk {
 	my $out = zeroes( 3, $in->slice('(0)')->dims );
 
 	$in = $in->new_or_inplace;
-	
+
 	if($opt->{byte}) {
 	    $in = $in / pdl(256); # makes copy
 	}
@@ -1647,7 +1641,7 @@ sub t_cmyk {
 HSL stands for Hue, Saturation, Lightness.  It's not an absolute
 color space, simply derived from each RGB (by default, linearized
 sRGB).  it has the same gamut as the host RGB system.  The coordinates
-are hexagonal on the (RYGCBM) hexagon, following the nearest face of 
+are hexagonal on the (RYGCBM) hexagon, following the nearest face of
 the (diagonally sliced) RGB cube.
 
 HSL is a double-cone system, so iso-L surfaces are close to the plane
@@ -1669,15 +1663,15 @@ drops with S.
 You can represent out-of-gamut values in either system, by using
 S values greater than unity, or "illegal" V or L values.
 
-Hue, Saturation, and (Lightness or Value) each run from 0 to 1.  
+Hue, Saturation, and (Lightness or Value) each run from 0 to 1.
 
 By default, the hue value follows a sin**4 scaling along each side of
 the RYGCBM hexagon.  This softens the boundaries near the edges of the
-RGB cube, giving a better peceptual "color-wheel" transition between 
+RGB cube, giving a better peceptual "color-wheel" transition between
 hues.  There is a flag to switch to the linear behavior described in,
 e.g., the Wikipedia article on the HSV system.
 
-You can encode the Lightness or Value with a gamma value ("lgamma") if 
+You can encode the Lightness or Value with a gamma value ("lgamma") if
 desired.
 
 Options:
@@ -1718,11 +1712,11 @@ sub t_hsl {
 	);
 
     $me->{name} = "HSV" if($me->{params}->{hsv});
-    
+
     $me->{func} = sub {
 	my($in, $opt) = @_;
 	my $out = zeroes($in);
-	
+
 	my $Cmax = $in->maximum;
 	my $Cmin = $in->minimum;
 	my $maxdex = $in->qsorti->slice('(2)')->sever;
@@ -1734,10 +1728,10 @@ sub t_hsl {
 
 	if($opt->{hue_linear}) {
 	    ## Old linear method
-	 $H .= ( 
+	 $H .= (
 	    (($in->index1d($dexes->slice('1')) - $in->index1d($dexes->slice('2')))->slice('(0)')/($Delta+($Delta==0)))
 		+ 2 * $dexes->slice('(0)')  ) ;
-	
+
 	 $H += 6*($H<0);
 	 $H /= 6;
 	} else {
@@ -1751,7 +1745,7 @@ sub t_hsl {
 	}
 
 	$H += ($H<0);
-	    
+
 	# Lightness and Saturation
 	my $L = $out->slice('(2)');
 	if($opt->{hsv}) {
@@ -1761,7 +1755,7 @@ sub t_hsl {
 	    $L .= ($Cmax + $Cmin)/2;
 	    $out->slice('(1)') .= $Delta / (1 - (2*$L-1)->abs + (($L==0) | ($L==1)));
 	}
-	
+
 
 	if( $opt->{lgamma} != 1 ){
 	    $L .= $L * (($L->abs + ($L==0)) ** (1.0/$opt->{lgamma} - 1));
@@ -1784,7 +1778,7 @@ sub t_hsl {
 	if($opt->{lgamma} != 1) {
 	    $L = $L * (($L->abs + ($L==0)) ** ($opt->{lgamma}-1));
 	}
-	
+
 	my $ZCX = zeroes($in);
 	my $C = $ZCX->slice('(1)');
 	my $m;
@@ -1803,7 +1797,7 @@ sub t_hsl {
 	    ## New hotness: smooth transitions at corners.
 	    $ZCX->slice('(2)') .= $C * sin($PI/2 * (1 - ($H % 2 - 1)->abs))**4;
 	}
-	
+
 	my $dexes = pdl( [1,2,0], [2,1,0], [0,1,2], [0,2,1], [2,0,1], [1,0,2] )->mv(1,0)->sever;
 	my $dex = $dexes->index1d($H->floor->slice('*1,*1') % 6)->slice('(0)')->sever; # 3x(threads)
 	my $out = $ZCX->index1d($dex)->sever + $m->slice('*1');
@@ -1857,12 +1851,12 @@ both the source and destination RGB spaces.
 
 =item from (default="D65")
 
-If present, this is the xyY or name of the OLD illuminant.  The default 
+If present, this is the xyY or name of the OLD illuminant.  The default
 is D65, the illuminant for sRGB (and therefore lsRGB as well).
 
 =item basis (default="sRGB")
 
-If present, this needs to be either "sRGB" or "XYZ" (case insensitive).  
+If present, this needs to be either "sRGB" or "XYZ" (case insensitive).
 If it's sRGB, the input and output are treated as standard lsRGB coordinates.
 If it's XYZ, then the input and output are in CIE XYZ coordinates.
 
@@ -1894,7 +1888,7 @@ sub t_shift_illuminant {
     $me->{params}->{to} = $new_illuminant;
 
     if(UNIVERSAL::isa($me->{params}->{method},"PDL")) {
-	if($me->{params}->{method}->ndims==2 && 
+	if($me->{params}->{method}->ndims==2 &&
 	   $me->{params}->{method}->dim(0)==3 &&
 	   $me->{params}->{method}->dim(1)==3) {
 	    $me->{params}->{Ma} = $me->{params}->{method}->copy;
@@ -1933,7 +1927,7 @@ sub t_shift_illuminant {
 	} else {
 	    return  ((  ( $srgb2cxyz_inv x $M x $srgb2cxyz_mat ) x $in->slice('*1')  )->slice('(0)')->sever);
 	}
-	
+
     };
 
     $me->{inv} = sub {
@@ -1953,7 +1947,7 @@ sub t_shift_illuminant {
     return t_gamma(1.0/$me->{params}->{gamma}) x $me x t_gamma($me->{params}->{gamma});
 }
 
-=head2 t_shift_rgb 
+=head2 t_shift_rgb
 
 =for usage
 
@@ -1965,7 +1959,7 @@ Shifts the primary color basis of the lsrgb TO the destination system.
 Most named RGB systems have an associated preferred gamma, but that is
 ignored by default: the RGB values are treated as if they are all
 linear representations.  You can specify EITHER the name of the system
-OR the specific RGB parameters for that system.  
+OR the specific RGB parameters for that system.
 
 The RGB parameters, if you specify them, need to be in the form of a
 hash ref.  The hash keys should be the same as would be returned by
@@ -1975,7 +1969,7 @@ except for gamma (which is ignored).
 Alternatively, you can use the name of a known system.  These are listed in the
 documentation for C<PDL::Transform::Color::get_rgb>.
 
-C<t_shift_rgb> takes several options.  
+C<t_shift_rgb> takes several options.
 
 =over 3
 
@@ -2033,14 +2027,14 @@ sub t_shift_rgb {
 	$to_gamma   = $me->{params}->{gamma} if !defined $to_gamma;
     }
 
-    my $out = 
-	!t_xyz(rgb_system=>$to_rgb, gamma=>$me->{params}->{gamma}, use_system_gamma=>$me->{params}->{use_system_gamma}) x 
-	t_shift_illuminant($to_rgb->{w},basis=>"XYZ",from=>$from_rgb->{w},method=>$me->{params}->{wp_method}) x 
+    my $out =
+	!t_xyz(rgb_system=>$to_rgb, gamma=>$me->{params}->{gamma}, use_system_gamma=>$me->{params}->{use_system_gamma}) x
+	t_shift_illuminant($to_rgb->{w},basis=>"XYZ",from=>$from_rgb->{w},method=>$me->{params}->{wp_method}) x
 	t_xyz(rgb_system=>$from_rgb, gamma=>$me->{params}->{gamma}, use_system_gamma=>$me->{params}->{use_system_gamma});
 
     return $out;
 
-}		    
+}
 
 ##############################
 # Reference illuminants
@@ -2062,7 +2056,7 @@ temperature in K divided by 100, e.g. broad daylight is D65,
 corresponding to 6500 Kelvin.
 
 This is used for calculating standard reference illuminants, to convert
-RGB values between illuminants.  
+RGB values between illuminants.
 
 For example, sRGB uses a D65 illuminant, but many other color standards
 refer to a D50 illuminant.
@@ -2077,14 +2071,14 @@ See C<t_xyy> for a description of the CIE xyY absolute colorimetric system.
 
 C<xyy_from_D> accepts the following options:
 
-=over 3 
+=over 3
 
-=item Y - the Y value of the output xyY coordinate 
+=item Y - the Y value of the output xyY coordinate
 
 =back
 
 =cut
-    
+
 sub xyy_from_D {
     my $D = pdl(shift);
     my $u_opt = shift || {};
@@ -2147,7 +2141,7 @@ my $hptab = [
     [0.3812, 0.3797],
     [0.3776, 0.3713]
     ];
-    
+
 
 
 =head2 PDL::Transform::Color::xyy_from_illuminant
@@ -2165,17 +2159,17 @@ edition.
 
 The illuminant of a system is equivalent to its white point -- it is
 the location in xyY absolute colorimetric space that corresponds to
-"white".  
+"white".
 
 CIE recognizes many standard illuminants, and (as of 2017) is in the
-process of creating a new set -- the "L" series illuminants -- that is 
+process of creating a new set -- the "L" series illuminants -- that is
 meant to represent LED lighting.
 
 Proper treatment of an illuminant requires a full spectral representation,
-which the CIE specifies for each illuminant.  Analysis of that spectrum is 
+which the CIE specifies for each illuminant.  Analysis of that spectrum is
 a major part of what CIE calls "Color rendering index (CRI)" for a particular
 light source.  PDL::Transform::Color is a strictly tri-coordinate system
-and does not handle the nuances of spectral effects on CRI.  In effect, 
+and does not handle the nuances of spectral effects on CRI.  In effect,
 all illuminants are treated as having a CRI of unity (perfect).
 
 Illuminants that are understood are:
@@ -2202,7 +2196,7 @@ The CIE names are:
 
 =item F[n] - Fluorescent lights of various types (n=1-12 or 3.1-3.15)
 
-=item HP[n] - High Pressure discharge lamps (n=1-5) 
+=item HP[n] - High Pressure discharge lamps (n=1-5)
 
 =item L[n] - LED lighting (not yet supported)
 
@@ -2220,7 +2214,7 @@ sub xyy_from_illuminant {
 	}
     }
     my $u_opt = shift || {};
-    my %opt = parse({ 
+    my %opt = parse({
 	Y=>1
 		    }, $u_opt);
     if($name =~ m/^A/i) {
@@ -2237,7 +2231,7 @@ sub xyy_from_illuminant {
 	my $flno = $1+0;
 	my $flsubno = $2+0;
 	die "Illuminant $name not recognized (FL1-FL12, or FL3.1-FL3.15)"
-	    if($flno < 1 || $flno > 12 || 
+	    if($flno < 1 || $flno > 12 ||
 	       ($flsubno && $flno != 3) ||
 	       ($flsubno > 15)
 	    );
@@ -2317,7 +2311,7 @@ for my $k(keys %$rgbtab_src) {
 
 =head2 PDL::Transform::Color::get_rgb
 
-=for usage 
+=for usage
 
     my $rgb_hash = get_rgb( $name );
 
@@ -2325,8 +2319,8 @@ for my $k(keys %$rgbtab_src) {
 
 C<PDL::Transform::Color::get_rgb> is an internal routine that retrieves a set of
 RGB primary colors from an internal database.  There are several named RGB systems,
-with different primary colors for each.  The primary colors are represented as 
-CIE xyY values in a returned hash ref.  
+with different primary colors for each.  The primary colors are represented as
+CIE xyY values in a returned hash ref.
 
 The return value is a hash ref with the following fields:
 
@@ -2391,9 +2385,9 @@ Recognized RGB system names are:
 =item wgRGB - Wide Gamut RGB (gamma=2.2, white=D50)
 
 =back
-    
+
 =cut
-    
+
 sub get_rgb {
     my $new_rgb = shift;
     if (ref $new_rgb eq 'HASH') {
@@ -2408,5 +2402,13 @@ sub get_rgb {
       if !($new_rgb = $rgbtab->{$rgb_abbrevs->{$new_rgb}});
     return $new_rgb;
 }
+
+=head1 AUTHOR
+
+Copyright 2017, Craig DeForest (deforest@boulder.swri.edu).  This
+module may be modified and distributed under the same terms as PDL
+itself.  The module comes with NO WARRANTY.
+
+=cut
 
 1;
