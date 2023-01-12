@@ -151,18 +151,25 @@ eval { $hsltest2 = $hsltest->invert($t);};
 is $@, '', "t_hsv ran ok in reverse";
 ok(all( ($brgbcmyw - $hsltest2 )->abs < 1e-4), "t_hsv gave good reverse answers");
 
+{
 ##########
 # test _srgb_encode and _srgb_decode
-$a = xvals(256)/255;
-eval { $b = PDL::Transform::Color::_srgb_encode($a); };
-is $@, '', "_srgb_encode ran ok";
-ok(all($b+1e-10 > $a), "_srgb_encode output is always larger than input on [0,1]");
-ok(all($b->slice('1:-1')>$b->slice('0:-2')),"_srgb_encode output is monotonically increasing");
-my $slope = $b->slice('1:-1') - $b->slice('0:-2');
-ok(all($slope->slice('1:-1') < $slope->slice('0:-2')),"slope is monotonically decreasing");
-my $aa = eval { PDL::Transform::Color::_srgb_decode($b) };
-is $@, '', "_srgb_decode ran ok";
-ok(all( ($aa > $a -1e-10) & ($aa < $a + 1e-10) ),"decoding undoes coding");
+my ($a,$bfull,$b) = sequence(3,8)/255;
+my $t = t_srgb();
+eval { $b = ($bfull = $a->apply($t))->flat; };
+is $@, '', "t_srgb ran ok";
+ok(all($b+1e-10 > $a->flat), "_srgb_encode output is always larger than input on [0,1]");
+my $slope1 = $b->slice('1:-1');
+my $slope2 = $b->slice('0:-2');
+ok(all($slope1>$slope2),"_srgb_encode output is monotonically increasing") or diag $slope1, $slope2;
+my $slope = $slope1 - $slope2;
+my $slope1a = $slope->slice('1:9');
+my $slope2a = $slope->slice('0:8');
+ok(all($slope1a <= $slope2a),"early slope is non-increasing") or diag $slope1a, "\n", $slope2a, "\n", $slope1a <= $slope2a;
+my $aa = eval { $bfull->apply(!$t) };
+is $@, '', "!t_srgb ran ok";
+ok(all approx($aa, $a, 1e-3), "decoding undoes coding") or diag $aa, $a;
+}
 
 ##############################
 # test t_pc

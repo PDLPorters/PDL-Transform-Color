@@ -41,6 +41,7 @@ WriteMakefile(
         'PDL'                 => 0,
         'PDL::MatrixOps'      => 0,
 	'PDL::Transform'      => 0,
+	'PDL::Graphics::ColorSpace' => '0.203',
     },
     META_ADD => {
         resources => {

@@ -1,5 +1,6 @@
 - fixes for f_lab including tests - thanks @stphnlyd
 - minimum Perl 5.10
+- switch to using PDL::Graphics::ColorSpace for both speed and correctness
 
 1.006 2022-01-23
 - fix t_xyz2lab - thanks @vadim-160102

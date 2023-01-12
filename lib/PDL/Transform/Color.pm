@@ -335,6 +335,7 @@ use PDL::LiteF;
 use PDL::Transform;
 use PDL::Math;
 use PDL::Options;
+use PDL::Graphics::ColorSpace;
 use Carp;
 
 our @ISA = ( 'Exporter', 'PDL::Transform' );
@@ -347,15 +348,8 @@ our %EXPORT_TAGS = (Func=>\@EXPORT_OK);
 
 our $PI = 3.141592653589793238462643383279502;
 
-# Some matrix values of use in RGB conversions...
-
-# Matrix to convert CIE XYZ to sRGB
-our($srgb2cxyz_inv) =
-    pdl( [ 3.2410, -1.5374, -0.4986],
-	 [-0.9692,  1.8760,  0.0416],
-	 [ 0.0556, -0.2040,  1.0570]
-    );
-our($srgb2cxyz_mat) = $srgb2cxyz_inv->inv;
+our $srgb2cxyz_inv = $PDL::Graphics::ColorSpace::RGBSpace::RGB_SPACE->{sRGB}{mstar}->transpose;
+our $srgb2cxyz_mat = $PDL::Graphics::ColorSpace::RGBSpace::RGB_SPACE->{sRGB}{m}->transpose;
 
 sub _new { __PACKAGE__->new(@_) }
 
@@ -568,39 +562,6 @@ C<byte> option is not set.
 
 =cut
 
-# Helper routines do encoding on the domain [0,1].  These
-# are slow and lame with the multiplicative masking -- would do better as a PP routine...
-sub _srgb_encode {
-    my $a = shift;
-    my $b = ($a->is_inplace ? $a->new_or_inplace : $a->copy);
-    my $sgn = 2*(0.5-($a<0));
-    $b->inplace->abs;
-    $b .= (
-	($b <= 0.00304) * (12.92 * $b )  +
-	($b >  0.00304) * (
-	    (1.055 * ( $b * (($b+1e-30) ** (1.0/2.4 - 1)) ) ) - 0.055
-	)
-	);
-    $b *= $sgn;
-    return $b;
-}
-
-sub _srgb_decode {
-    my $a = shift;
-    my $b = ($a->is_inplace ? $a->new_or_inplace : $a->copy);
-    my $sgn = 2*(0.5-($a<0));
-    $b->inplace->abs;
-    my $c = ($b+0.055)/1.055;
-    $b .= (
-	($b <= 0.03928) * ( $b / 12.92 ) +
-	($b >  0.03928) * (
-	    $c * ( $c->abs ** 1.4 )
-	)
-	);
-    $b *= $sgn;
-    return $b;
-}
-
 sub t_srgb {
     my($me) = _new(@_,'encode 24-bit sRGB',
 		   {clip=>0,
@@ -612,10 +573,9 @@ sub t_srgb {
 	my($in,$opt) = @_;
 	# Convert from CIE RGB to sRGB primaries
 	my($rgb) = $in->new_or_inplace();
-	# Slow and lame -- would work far better as a pp routine...
-	_srgb_encode($rgb->inplace);
+	rgb_from_linear($rgb->inplace, -1);
+	$rgb->set_inplace(0); # needed as bug in PDL <2.082
 	my $out;
-
 	$rgb *= 255;
 	if($opt->{byte}) {
 	    $out = byte( $rgb->rint->clip(0,255) );
@@ -624,17 +584,14 @@ sub t_srgb {
 	} else {
 	    $out = $rgb;
 	}
-
 	$out;
     };
 
     $me->{inv} = sub {
 	my($in,$opt) = @_;
-
 	my $rgb = $in / pdl(255.0);
-
-	_srgb_decode($rgb->inplace);
-
+	rgb_to_linear($rgb->inplace, -1);
+	$rgb->set_inplace(0); # needed as bug in PDL <2.082
 	$rgb;
     };
 
@@ -1105,7 +1062,8 @@ sub t_pc {
 
 	# Default to sRGB coding for perceptual curves
 	if($opt->{lut}->{phot} && $opt->{perceptual}) {
-	    _srgb_decode($in2->inplace);
+	    rgb_to_linear($in2->inplace, -1);
+	    $in2->set_inplace(0); # needed as bug in PDL <2.082
 	}
 
 	if($opt->{clip}) {
@@ -1220,30 +1178,10 @@ or a hash), this flag is ignored.
 
 *t_cieXYZ = \&t_xyz;
 
-sub _xyY_RGB_to_M {
-  my ($r, $g, $b) = @_;
-  my ($xr,$yr) = $r->dog;
-  my ($xg,$yg) = $g->dog;
-  my ($xb,$yb) = $b->dog;
-  my $Xr = $xr / ($yr + ($yr==0));
-  my $Yr = 1;
-  my $Zr = (1 - $xr - $yr)/($yr+($yr==0));
-  my $Xg = $xg / ($yg + ($yg==0));
-  my $Yg = 1;
-  my $Zg = (1 - $xg - $yg)/($yg+($yg==0));
-  my $Xb = $xb / ($yb + ($yb==0));
-  my $Yb = 1;
-  my $Zb = (1 - $xb - $yb)/($yb+($yb==0));
-  pdl( [ $Xr, $Xg, $Xb ], [$Yr, $Yg, $Yb], [$Zr, $Zg, $Zb] );
-}
-
 sub _M_relativise {
   my ($M, $w) = @_;
   my $Minv = $M->inv;
-  my ($xw, $yw, $Yw) = $w->dog;
-  my $Xw = $xw * $Yw / ($yw + ($yw==0));
-  my $Zw = (1 - $xw - $yw)*$Yw / ($yw+($yw==0));
-  my $XYZw = pdl($Xw,$Yw,$Zw);
+  my $XYZw = xyY_to_xyz($w);
   my $Srgb = ($Minv x $XYZw->slice('*1'))->slice('(0)'); # row vector
   $M * $Srgb;
 }
@@ -1264,7 +1202,7 @@ sub t_xyz {
 
     } else {
 	my $rgb = get_rgb($me->{params}{rgb_system});
-	my $M = _M_relativise(_xyY_RGB_to_M(@$rgb{qw(r g b)}), $rgb->{w});
+	my $M = _M_relativise(xyY_to_xyz(pdl(@$rgb{qw(r g b)}))->transpose, $rgb->{w});
 	@{$me->{params}}{qw(mat inv)} = ($M, $M->inv);
 	$me->{params}{gamma} = $rgb->{gamma} if $me->{params}{use_system_gamma};
     }
@@ -1433,29 +1371,6 @@ using visual fatigue effects, and can be classified using Lab.
 Lab is easiest to convert directly from XYZ space, so the C<t_lab> constructor
 returns a compound transform of C<t_xyz2lab> and C<t_xyz>.
 
-=cut
-
-sub f_lab {
-    my $in = shift;
-    my $delta = 6/29;
-    my $delta3 = $delta * $delta * $delta;
-    return (
-	($in >  $delta3) * ( $in * (($in->abs+($in==0)) ** (1/3-1)) ) +
-	($in <= $delta3) * ( $in / (3 * $delta * $delta) + 4/29 )
-	);
-}
-
-
-sub f_lab_inv {
-    my $in = shift;
-    my $delta = 6/29;
-
-    return (
-	($in >  $delta) * ($in*$in*$in) +
-	($in <= $delta) * (3 * $delta * $delta * ($in - 4/29))
-	);
-}
-
 =head2 t_xyz2lab
 
 =for usage
@@ -1477,23 +1392,12 @@ sub t_xyz2lab {
 	);
 
     # get and store illuminant XYZ
-    my $wp_xyy = xyy_from_illuminant($me->{params}->{white});
-    $me->{params}->{wp_xyz} = $wp_xyy->copy;
-    $me->{params}->{wp_xyz}->slice('2') .= 1 - $wp_xyy->slice('0') - $wp_xyy->slice('1');
-    $me->{params}->{wp_xyz} *= $wp_xyy->slice('2') / $wp_xyy->slice('1');
+    my $wp_xyy = xyy_from_illuminant($me->{params}{white});
+    $me->{params}{wp_xy} = $wp_xyy->slice('0:1')->sever;
     # input is XYZ by the time it gets here
     $me->{func} = sub {
 	my($in,$opt) = @_;
-	my($out) = zeroes($in);
-
-	my $wp = $opt->{wp_xyz} + ($opt->{wp_xyz}==0);
-
-	my $FYp = f_lab(  $in->slice('(1)') / $wp->slice('(1)')  );
-
-	$out->slice('(0)') .= 116 * $FYp - 16;
-	$out->slice('(1)') .= 500 * ( f_lab( $in->slice('(0)') / $wp->slice('(0)') ) - $FYp   );
-	$out->slice('(2)') .= 200 * ( $FYp - f_lab( $in->slice('(2)') / $wp->slice('(2)') ) );
-
+	my $out = xyz_to_lab($in, {white_point=>$me->{params}{wp_xy}});
 	if($in->is_inplace) {
 	    $in .= $out;
 	    $out = $in;
@@ -1503,14 +1407,7 @@ sub t_xyz2lab {
 
     $me->{inv} = sub {
 	my($in,$opt) = @_;
-	my($out) = zeroes($in);
-
-	my $Lterm = ($in->slice('(0)')+16)/116;
-
-	$out->slice('(0)') .= $opt->{wp_xyz}->slice('(0)') * f_lab_inv( $Lterm + $in->slice('(1)')/500 );
-	$out->slice('(1)') .= $opt->{wp_xyz}->slice('(1)') * f_lab_inv( $Lterm );
-	$out->slice('(2)') .= $opt->{wp_xyz}->slice('(2)') * f_lab_inv( $Lterm - $in->slice('(2)')/200 );
-
+	my $out = lab_to_xyz($in, {white_point=>$me->{params}{wp_xy}});
 	if($in->is_inplace) {
 	    $in .= $out;
 	    $out = $in;
@@ -2290,7 +2187,7 @@ our $rgbtab = {};
 our $rgb_abbrevs = {};
 for my $k(keys %$rgbtab_src) {
     my $v = $rgbtab_src->{$k};
-    $rgbtab->{$k} = {
+    my $spec = $rgbtab->{$k} = {
 	gamma  => $v->[0],
 	w_name => $v->[1],
 	w      => xyy_from_illuminant($v->[1]),
@@ -2298,6 +2195,7 @@ for my $k(keys %$rgbtab_src) {
 	g      => pdl(@$v[5..7]),
 	b      => pdl(@$v[8..10])
     };
+    $spec->{white_point} = $spec->{w}->slice('0:1'); # PGCS: xy only
     my $str = $k;
     $str =~ tr/A-Z/a-z/;
     $str =~ s/\s\-//g;
@@ -2339,6 +2237,10 @@ The return value is a hash ref with the following fields:
 =item b - the xyY value of the blue primary color at unit intensity
 
 =back
+
+As of 1.007, because this module now uses L<PDL::Graphics::ColorSpace>
+for some calculations, the hash ref will also include fields used by
+that module.
 
 Recognized RGB system names are:
 
@@ -2394,7 +2296,10 @@ sub get_rgb {
 	for my $k (qw/w r g b/) {
 	    die "Incorrect RGB primaries hash -- see docs" unless( defined($new_rgb->{$k}) and UNIVERSAL::isa($new_rgb->{$k},"PDL") and $new_rgb->{$k}->nelem==3 and $new_rgb->{$k}->dim(0)==3);
 	}
-	return { gamma=>1, %$new_rgb };
+	$new_rgb = { gamma=>1, %$new_rgb };
+	$new_rgb->{white_point} = $new_rgb->{w}->slice('0:1') # PGCS: xy only
+	  if !exists $new_rgb->{white_point};
+	return $new_rgb;
     }
     die "bad RGB specification -- see docs" if ref $new_rgb;
     $new_rgb=~tr/A-Z/a-z/; $new_rgb =~ s/\s\-//g;

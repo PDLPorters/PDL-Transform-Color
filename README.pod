@@ -709,7 +709,6 @@ using visual fatigue effects, and can be classified using Lab.
 Lab is easiest to convert directly from XYZ space, so the C<t_lab> constructor
 returns a compound transform of C<t_xyz2lab> and C<t_xyz>.
 
-=cut
 =head2 t_xyz2lab
 
 =for usage
@@ -1048,6 +1047,10 @@ The return value is a hash ref with the following fields:
 =item b - the xyY value of the blue primary color at unit intensity
 
 =back
+
+As of 1.007, because this module now uses L<PDL::Graphics::ColorSpace>
+for some calculations, the hash ref will also include fields used by
+that module.
 
 Recognized RGB system names are:
 
