@@ -521,7 +521,7 @@ sub t_brgb {
 	$out;
     };
 
-    return gammify($me);
+    gammify($me);
 }
 
 =head2 t_srgb
