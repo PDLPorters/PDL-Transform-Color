@@ -490,34 +490,21 @@ sub t_brgb {
     $me->{func} = sub {
 	my($in, $opt) = @_;
 	my $out = $in->new_or_inplace;
-
+	$out->inplace->clip(0,1)
+	  if $opt->{display_gamma} != 1 or $opt->{byte} or $opt->{clip};
 	if($opt->{display_gamma} != 1) {
-	    $out *= ($out->abs)**(1.0/$opt->{display_gamma} - 1);
+	    $out **= (1.0/$opt->{display_gamma});
 	}
-
 	$out *= 255.0;
-
-	if($opt->{byte}) {
-	    $out = byte($out->rint->clip(0,255));
-	} elsif($opt->{clip}) {
-	    $out->inplace->clip(0,255.49999);
-	}
-
+	return byte($out->rint) if $opt->{byte};
 	$out;
     };
 
     $me->{inv} = sub {
 	my($in,$opt) = @_;
-
 	my $out = $in / 255.0;
-
-	if($opt->{display_gamma} != 1) {
-	    $out *= ($out->abs)**($opt->{display_gamma}-1);
-	}
-
-	if($opt->{clip}) {
-	    $out->inplace->clip(0,1);
-	}
+	$out **= $opt->{display_gamma} if $opt->{display_gamma} != 1;
+	$out->inplace->clip(0,1) if $opt->{clip};
 	$out;
     };
 
