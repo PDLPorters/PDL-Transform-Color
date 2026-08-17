@@ -1,3 +1,5 @@
+- update doc-installing
+
 1.010 2025-01-20
 - make t_brgb *not* divide by zero
 
